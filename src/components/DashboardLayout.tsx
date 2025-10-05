@@ -2,19 +2,36 @@ import { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { BookOpen, LogOut, Home, Users, FileText, Video, Settings, BarChart } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  role: "student" | "teacher" | "admin";
-  userName: string;
 }
 
-const DashboardLayout = ({ children, role, userName }: DashboardLayoutProps) => {
+const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
+  const { signOut, profile } = useAuth();
 
-  const handleLogout = () => {
-    // TODO: Implement actual logout
-    navigate("/");
+  if (!profile) return null;
+
+  const { role, full_name: userName } = profile;
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Logout failed",
+        description: "Please try again.",
+      });
+    }
   };
 
   const getNavItems = () => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,33 +6,63 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { signIn, profile, user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && profile && !loading) {
+      console.log("Redirecting user:", { 
+        email: user.email, 
+        role: profile.role, 
+        roleType: typeof profile.role,
+        fullProfile: profile 
+      });
+      const dashboardRoute = `/${profile.role}`;
+      console.log("Navigating to:", dashboardRoute);
+      navigate(dashboardRoute, { replace: true });
+    }
+  }, [user, profile, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // TODO: Implement actual authentication
-      toast({
-        title: "Login functionality",
-        description: "Authentication will be implemented with Lovable Cloud",
-      });
+      const { error } = await signIn(email, password);
       
-      // For now, simulate role detection and redirect
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Login failed",
+          description: error.message,
+        });
+        return;
+      }
+
+      toast({
+        title: "Welcome back!",
+        description: "You have been successfully logged in.",
+      });
+
+      // Wait a bit for profile to load, then redirect
       setTimeout(() => {
-        navigate("/student");
+        if (profile) {
+          console.log("Manual redirect after login:", profile.role);
+          navigate(`/${profile.role}`, { replace: true });
+        }
       }, 1000);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: "Please check your credentials and try again",
+        description: "An unexpected error occurred. Please try again.",
       });
     } finally {
       setIsLoading(false);

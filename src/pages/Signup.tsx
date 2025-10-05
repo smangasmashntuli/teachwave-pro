@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BookOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { signUp, user, profile, loading } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -18,6 +20,14 @@ const Signup = () => {
     role: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && profile && !loading) {
+      console.log("Redirecting signed up user:", { user: user.email, role: profile.role });
+      navigate(`/${profile.role}`, { replace: true });
+    }
+  }, [user, profile, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,21 +53,39 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      // TODO: Implement actual authentication
+      // Create account with role-based email domain
+      const roleEmailMap = {
+        student: formData.email,
+        teacher: formData.email,
+        admin: formData.email
+      };
+
+      const { error } = await signUp(
+        roleEmailMap[formData.role as keyof typeof roleEmailMap], 
+        formData.password, 
+        formData.name
+      );
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Signup failed",
+          description: error.message,
+        });
+        return;
+      }
+
       toast({
         title: "Account created!",
-        description: "Your account has been created successfully",
+        description: "Please check your email to verify your account.",
       });
       
-      // Redirect based on role
-      setTimeout(() => {
-        navigate(`/${formData.role}`);
-      }, 1000);
+      navigate("/login");
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Signup failed",
-        description: "Please try again",
+        description: "An unexpected error occurred. Please try again.",
       });
     } finally {
       setIsLoading(false);
