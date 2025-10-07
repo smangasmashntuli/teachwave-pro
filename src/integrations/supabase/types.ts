@@ -7,566 +7,414 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
   public: {
     Tables: {
+      classes: {
+        Row: {
+          id: string
+          title: string
+          subject: string
+          grade_level: string
+          description: string | null
+          teacher_id: string
+          class_code: string
+          schedule_day: string | null
+          schedule_time: string | null
+          duration_minutes: number | null
+          max_students: number | null
+          is_active: boolean | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          subject: string
+          grade_level: string
+          description?: string | null
+          teacher_id: string
+          class_code: string
+          schedule_day?: string | null
+          schedule_time?: string | null
+          duration_minutes?: number | null
+          max_students?: number | null
+          is_active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          title?: string
+          subject?: string
+          grade_level?: string
+          description?: string | null
+          teacher_id?: string
+          class_code?: string
+          schedule_day?: string | null
+          schedule_time?: string | null
+          duration_minutes?: number | null
+          max_students?: number | null
+          is_active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+      }
+      students: {
+        Row: {
+          id: string
+          user_id: string | null
+          student_number: string | null
+          first_name: string
+          last_name: string
+          email: string
+          grade_level: string | null
+          date_of_birth: string | null
+          parent_email: string | null
+          phone_number: string | null
+          address: string | null
+          enrollment_date: string | null
+          is_active: boolean | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          student_number?: string | null
+          first_name: string
+          last_name: string
+          email: string
+          grade_level?: string | null
+          date_of_birth?: string | null
+          parent_email?: string | null
+          phone_number?: string | null
+          address?: string | null
+          enrollment_date?: string | null
+          is_active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          student_number?: string | null
+          first_name?: string
+          last_name?: string
+          email?: string
+          grade_level?: string | null
+          date_of_birth?: string | null
+          parent_email?: string | null
+          phone_number?: string | null
+          address?: string | null
+          enrollment_date?: string | null
+          is_active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+      }
+      class_enrollments: {
+        Row: {
+          id: string
+          class_id: string
+          student_id: string
+          enrolled_at: string | null
+          is_active: boolean | null
+        }
+        Insert: {
+          id?: string
+          class_id: string
+          student_id: string
+          enrolled_at?: string | null
+          is_active?: boolean | null
+        }
+        Update: {
+          id?: string
+          class_id?: string
+          student_id?: string
+          enrolled_at?: string | null
+          is_active?: boolean | null
+        }
+      }
       assignments: {
         Row: {
-          created_at: string
+          id: string
+          class_id: string
+          title: string
           description: string | null
+          assignment_type: string | null
+          total_points: number | null
           due_date: string | null
-          id: string
+          instructions: string | null
+          attachments: Json | null
           is_published: boolean | null
-          subject_id: string | null
-          submission_instructions: string | null
-          teacher_id: string | null
-          title: string
-          total_marks: number
-          updated_at: string
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
           id?: string
-          is_published?: boolean | null
-          subject_id?: string | null
-          submission_instructions?: string | null
-          teacher_id?: string | null
+          class_id: string
           title: string
-          total_marks?: number
-          updated_at?: string
+          description?: string | null
+          assignment_type?: string | null
+          total_points?: number | null
+          due_date?: string | null
+          instructions?: string | null
+          attachments?: Json | null
+          is_published?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
           id?: string
-          is_published?: boolean | null
-          subject_id?: string | null
-          submission_instructions?: string | null
-          teacher_id?: string | null
+          class_id?: string
           title?: string
-          total_marks?: number
-          updated_at?: string
-        }
-      }
-      assignment_submissions: {
-        Row: {
-          assignment_id: string | null
-          feedback: string | null
-          file_url: string | null
-          id: string
-          is_graded: boolean | null
-          marks_awarded: number | null
-          student_id: string | null
-          submission_text: string | null
-          submitted_at: string
-        }
-        Insert: {
-          assignment_id?: string | null
-          feedback?: string | null
-          file_url?: string | null
-          id?: string
-          is_graded?: boolean | null
-          marks_awarded?: number | null
-          student_id?: string | null
-          submission_text?: string | null
-          submitted_at?: string
-        }
-        Update: {
-          assignment_id?: string | null
-          feedback?: string | null
-          file_url?: string | null
-          id?: string
-          is_graded?: boolean | null
-          marks_awarded?: number | null
-          student_id?: string | null
-          submission_text?: string | null
-          submitted_at?: string
-        }
-      }
-      class_attendance: {
-        Row: {
-          attendance_code_used: string | null
-          class_id: string | null
-          id: string
-          marked_at: string | null
-          status: Database["public"]["Enums"]["attendance_status"] | null
-          student_id: string | null
-        }
-        Insert: {
-          attendance_code_used?: string | null
-          class_id?: string | null
-          id?: string
-          marked_at?: string | null
-          status?: Database["public"]["Enums"]["attendance_status"] | null
-          student_id?: string | null
-        }
-        Update: {
-          attendance_code_used?: string | null
-          class_id?: string | null
-          id?: string
-          marked_at?: string | null
-          status?: Database["public"]["Enums"]["attendance_status"] | null
-          student_id?: string | null
+          description?: string | null
+          assignment_type?: string | null
+          total_points?: number | null
+          due_date?: string | null
+          instructions?: string | null
+          attachments?: Json | null
+          is_published?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
         }
       }
       grades: {
         Row: {
-          academic_year: string
-          created_at: string
-          description: string | null
           id: string
-          name: string
-          updated_at: string
+          assignment_id: string
+          student_id: string
+          points_earned: number | null
+          percentage: number | null
+          letter_grade: string | null
+          feedback: string | null
+          submitted_at: string | null
+          graded_at: string | null
+          is_late: boolean | null
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
-          academic_year: string
-          created_at?: string
-          description?: string | null
           id?: string
-          name: string
-          updated_at?: string
+          assignment_id: string
+          student_id: string
+          points_earned?: number | null
+          percentage?: number | null
+          letter_grade?: string | null
+          feedback?: string | null
+          submitted_at?: string | null
+          graded_at?: string | null
+          is_late?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
-          academic_year?: string
-          created_at?: string
-          description?: string | null
           id?: string
-          name?: string
-          updated_at?: string
+          assignment_id?: string
+          student_id?: string
+          points_earned?: number | null
+          percentage?: number | null
+          letter_grade?: string | null
+          feedback?: string | null
+          submitted_at?: string | null
+          graded_at?: string | null
+          is_late?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
         }
       }
-      learning_content: {
+      attendance: {
         Row: {
-          content_type: Database["public"]["Enums"]["content_type"]
-          created_at: string
-          description: string | null
-          file_size: number | null
-          file_url: string | null
           id: string
-          is_published: boolean | null
-          subject_id: string | null
-          teacher_id: string | null
-          title: string
-          updated_at: string
+          class_id: string
+          student_id: string
+          class_date: string
+          status: string | null
+          notes: string | null
+          recorded_by: string | null
+          recorded_at: string | null
         }
         Insert: {
-          content_type: Database["public"]["Enums"]["content_type"]
-          created_at?: string
-          description?: string | null
-          file_size?: number | null
-          file_url?: string | null
           id?: string
-          is_published?: boolean | null
-          subject_id?: string | null
-          teacher_id?: string | null
-          title: string
-          updated_at?: string
+          class_id: string
+          student_id: string
+          class_date: string
+          status?: string | null
+          notes?: string | null
+          recorded_by?: string | null
+          recorded_at?: string | null
         }
         Update: {
-          content_type?: Database["public"]["Enums"]["content_type"]
-          created_at?: string
-          description?: string | null
-          file_size?: number | null
-          file_url?: string | null
           id?: string
-          is_published?: boolean | null
-          subject_id?: string | null
-          teacher_id?: string | null
-          title?: string
-          updated_at?: string
+          class_id?: string
+          student_id?: string
+          class_date?: string
+          status?: string | null
+          notes?: string | null
+          recorded_by?: string | null
+          recorded_at?: string | null
+        }
+      }
+      class_sessions: {
+        Row: {
+          id: string
+          class_id: string
+          session_title: string | null
+          session_date: string | null
+          duration_minutes: number | null
+          recording_url: string | null
+          meeting_link: string | null
+          session_notes: string | null
+          attendance_count: number | null
+          is_recorded: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          class_id: string
+          session_title?: string | null
+          session_date?: string | null
+          duration_minutes?: number | null
+          recording_url?: string | null
+          meeting_link?: string | null
+          session_notes?: string | null
+          attendance_count?: number | null
+          is_recorded?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          class_id?: string
+          session_title?: string | null
+          session_date?: string | null
+          duration_minutes?: number | null
+          recording_url?: string | null
+          meeting_link?: string | null
+          session_notes?: string | null
+          attendance_count?: number | null
+          is_recorded?: boolean | null
+          created_at?: string | null
+        }
+      }
+      student_progress: {
+        Row: {
+          id: string
+          class_id: string
+          student_id: string
+          current_grade: number | null
+          grade_trend: string | null
+          attendance_rate: number | null
+          assignment_completion_rate: number | null
+          participation_score: number | null
+          last_activity: string | null
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          class_id: string
+          student_id: string
+          current_grade?: number | null
+          grade_trend?: string | null
+          attendance_rate?: number | null
+          assignment_completion_rate?: number | null
+          participation_score?: number | null
+          last_activity?: string | null
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          class_id?: string
+          student_id?: string
+          current_grade?: number | null
+          grade_trend?: string | null
+          attendance_rate?: number | null
+          assignment_completion_rate?: number | null
+          participation_score?: number | null
+          last_activity?: string | null
+          notes?: string | null
+          updated_at?: string | null
+        }
+      }
+      analytics_events: {
+        Row: {
+          id: string
+          class_id: string
+          student_id: string
+          event_type: string
+          event_data: Json | null
+          duration_seconds: number | null
+          timestamp: string | null
+        }
+        Insert: {
+          id?: string
+          class_id: string
+          student_id: string
+          event_type: string
+          event_data?: Json | null
+          duration_seconds?: number | null
+          timestamp?: string | null
+        }
+        Update: {
+          id?: string
+          class_id?: string
+          student_id?: string
+          event_type?: string
+          event_data?: Json | null
+          duration_seconds?: number | null
+          timestamp?: string | null
         }
       }
       notifications: {
         Row: {
-          created_at: string
           id: string
+          recipient_id: string
+          sender_id: string | null
+          type: string
+          title: string
+          message: string | null
+          data: Json | null
           is_read: boolean | null
-          message: string
-          title: string
-          type: string
-          user_id: string | null
+          created_at: string | null
         }
         Insert: {
-          created_at?: string
           id?: string
-          is_read?: boolean | null
-          message: string
-          title: string
+          recipient_id: string
+          sender_id?: string | null
           type: string
-          user_id?: string | null
+          title: string
+          message?: string | null
+          data?: Json | null
+          is_read?: boolean | null
+          created_at?: string | null
         }
         Update: {
-          created_at?: string
           id?: string
-          is_read?: boolean | null
-          message?: string
-          title?: string
+          recipient_id?: string
+          sender_id?: string | null
           type?: string
-          user_id?: string | null
-        }
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          date_of_birth: string | null
-          email: string
-          full_name: string
-          id: string
-          phone: string | null
-          role: Database["public"]["Enums"]["user_role"]
-          updated_at: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          date_of_birth?: string | null
-          email: string
-          full_name: string
-          id: string
-          phone?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
-          updated_at?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          date_of_birth?: string | null
-          email?: string
-          full_name?: string
-          id?: string
-          phone?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
-          updated_at?: string
-        }
-      }
-      quiz_answers: {
-        Row: {
-          answer_text: string | null
-          attempt_id: string | null
-          created_at: string
-          id: string
-          is_correct: boolean | null
-          marks_awarded: number | null
-          question_id: string | null
-        }
-        Insert: {
-          answer_text?: string | null
-          attempt_id?: string | null
-          created_at?: string
-          id?: string
-          is_correct?: boolean | null
-          marks_awarded?: number | null
-          question_id?: string | null
-        }
-        Update: {
-          answer_text?: string | null
-          attempt_id?: string | null
-          created_at?: string
-          id?: string
-          is_correct?: boolean | null
-          marks_awarded?: number | null
-          question_id?: string | null
-        }
-      }
-      quiz_attempts: {
-        Row: {
-          id: string
-          is_completed: boolean | null
-          quiz_id: string | null
-          started_at: string
-          student_id: string | null
-          submitted_at: string | null
-          time_taken: number | null
-          total_score: number | null
-        }
-        Insert: {
-          id?: string
-          is_completed?: boolean | null
-          quiz_id?: string | null
-          started_at?: string
-          student_id?: string | null
-          submitted_at?: string | null
-          time_taken?: number | null
-          total_score?: number | null
-        }
-        Update: {
-          id?: string
-          is_completed?: boolean | null
-          quiz_id?: string | null
-          started_at?: string
-          student_id?: string | null
-          submitted_at?: string | null
-          time_taken?: number | null
-          total_score?: number | null
-        }
-      }
-      quiz_questions: {
-        Row: {
-          correct_answer: string | null
-          created_at: string
-          id: string
-          marks: number
-          options: Json | null
-          order_number: number
-          question_text: string
-          question_type: Database["public"]["Enums"]["quiz_type"]
-          quiz_id: string | null
-        }
-        Insert: {
-          correct_answer?: string | null
-          created_at?: string
-          id?: string
-          marks?: number
-          options?: Json | null
-          order_number: number
-          question_text: string
-          question_type: Database["public"]["Enums"]["quiz_type"]
-          quiz_id?: string | null
-        }
-        Update: {
-          correct_answer?: string | null
-          created_at?: string
-          id?: string
-          marks?: number
-          options?: Json | null
-          order_number?: number
-          question_text?: string
-          question_type?: Database["public"]["Enums"]["quiz_type"]
-          quiz_id?: string | null
-        }
-      }
-      quizzes: {
-        Row: {
-          auto_grade: boolean | null
-          created_at: string
-          description: string | null
-          end_date: string | null
-          id: string
-          is_published: boolean | null
-          start_date: string | null
-          subject_id: string | null
-          teacher_id: string | null
-          time_limit: number | null
-          title: string
-          total_marks: number
-          updated_at: string
-        }
-        Insert: {
-          auto_grade?: boolean | null
-          created_at?: string
-          description?: string | null
-          end_date?: string | null
-          id?: string
-          is_published?: boolean | null
-          start_date?: string | null
-          subject_id?: string | null
-          teacher_id?: string | null
-          time_limit?: number | null
-          title: string
-          total_marks?: number
-          updated_at?: string
-        }
-        Update: {
-          auto_grade?: boolean | null
-          created_at?: string
-          description?: string | null
-          end_date?: string | null
-          id?: string
-          is_published?: boolean | null
-          start_date?: string | null
-          subject_id?: string | null
-          teacher_id?: string | null
-          time_limit?: number | null
           title?: string
-          total_marks?: number
-          updated_at?: string
-        }
-      }
-      student_enrollments: {
-        Row: {
-          enrollment_date: string
-          grade_id: string | null
-          id: string
-          is_active: boolean | null
-          student_id: string | null
-        }
-        Insert: {
-          enrollment_date?: string
-          grade_id?: string | null
-          id?: string
-          is_active?: boolean | null
-          student_id?: string | null
-        }
-        Update: {
-          enrollment_date?: string
-          grade_id?: string | null
-          id?: string
-          is_active?: boolean | null
-          student_id?: string | null
-        }
-      }
-      subjects: {
-        Row: {
-          code: string
-          created_at: string
-          description: string | null
-          grade_id: string | null
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          description?: string | null
-          grade_id?: string | null
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          description?: string | null
-          grade_id?: string | null
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-      }
-      teacher_assignments: {
-        Row: {
-          assigned_date: string
-          id: string
-          is_active: boolean | null
-          subject_id: string | null
-          teacher_id: string | null
-        }
-        Insert: {
-          assigned_date?: string
-          id?: string
-          is_active?: boolean | null
-          subject_id?: string | null
-          teacher_id?: string | null
-        }
-        Update: {
-          assigned_date?: string
-          id?: string
-          is_active?: boolean | null
-          subject_id?: string | null
-          teacher_id?: string | null
-        }
-      }
-      virtual_classes: {
-        Row: {
-          actual_end: string | null
-          actual_start: string | null
-          attendance_code: string | null
-          created_at: string
-          description: string | null
-          id: string
-          meeting_url: string | null
-          recording_url: string | null
-          scheduled_end: string
-          scheduled_start: string
-          status: Database["public"]["Enums"]["class_status"] | null
-          subject_id: string | null
-          teacher_id: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          actual_end?: string | null
-          actual_start?: string | null
-          attendance_code?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          meeting_url?: string | null
-          recording_url?: string | null
-          scheduled_end: string
-          scheduled_start: string
-          status?: Database["public"]["Enums"]["class_status"] | null
-          subject_id?: string | null
-          teacher_id?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          actual_end?: string | null
-          actual_start?: string | null
-          attendance_code?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          meeting_url?: string | null
-          recording_url?: string | null
-          scheduled_end?: string
-          scheduled_start?: string
-          status?: Database["public"]["Enums"]["class_status"] | null
-          subject_id?: string | null
-          teacher_id?: string | null
-          title?: string
-          updated_at?: string
+          message?: string | null
+          data?: Json | null
+          is_read?: boolean | null
+          created_at?: string | null
         }
       }
     }
     Views: {
-      student_attendance_summary: {
-        Row: {
-          attendance_percentage: number | null
-          classes_attended: number | null
-          classes_late: number | null
-          student_id: string | null
-          student_name: string | null
-          subject_name: string | null
-          total_classes: number | null
-        }
-      }
-      student_performance_summary: {
-        Row: {
-          assignment_submissions: number | null
-          avg_assignment_score: number | null
-          avg_quiz_score: number | null
-          quiz_attempts: number | null
-          student_id: string | null
-          student_name: string | null
-          subject_name: string | null
-        }
-      }
-      student_subjects: {
-        Row: {
-          grade_name: string | null
-          student_id: string | null
-          subject_code: string | null
-          subject_description: string | null
-          subject_id: string | null
-          subject_name: string | null
-        }
-      }
-      teacher_subjects: {
-        Row: {
-          grade_name: string | null
-          subject_code: string | null
-          subject_description: string | null
-          subject_id: string | null
-          subject_name: string | null
-          teacher_id: string | null
-        }
-      }
+      [_ in never]: never
     }
     Functions: {
       [_ in never]: never
     }
     Enums: {
-      attendance_status: "present" | "absent" | "late"
-      class_status: "scheduled" | "ongoing" | "completed" | "cancelled"
-      content_type: "pdf" | "video" | "document" | "link" | "image"
-      quiz_type: "multiple_choice" | "short_answer" | "essay" | "true_false"
-      user_role: "student" | "teacher" | "admin"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never

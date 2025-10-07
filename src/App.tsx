@@ -11,6 +11,7 @@ import Signup from "./pages/Signup";
 import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import StudentGroupSelectionDemo from "./pages/StudentGroupSelectionDemo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +75,8 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            {/* Demo route for testing student group selection */}
+            <Route path="/demo/student-selection" element={<StudentGroupSelectionDemo />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

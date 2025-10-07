@@ -9,6 +9,7 @@ import SubjectManagement from "@/components/admin/SubjectManagement";
 import TeacherAssignments from "@/components/admin/TeacherAssignments";
 import AdminSubjectManagement from "@/components/admin/AdminSubjectManagement";
 import UserManagement from "@/components/admin/UserManagement";
+import SubjectGroupManagement from "@/components/admin/SubjectGroupManagement";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -164,6 +165,7 @@ const AdminDashboard = () => {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="subjects">Subjects</TabsTrigger>
+            <TabsTrigger value="groups">Subject Groups</TabsTrigger>
             <TabsTrigger value="assignments">Assignments</TabsTrigger>
             <TabsTrigger value="grades">Grades</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -343,6 +345,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="subjects">
             <AdminSubjectManagement />
+          </TabsContent>
+
+          <TabsContent value="groups">
+            <SubjectGroupManagement />
           </TabsContent>
 
           <TabsContent value="assignments">

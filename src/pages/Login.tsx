@@ -18,15 +18,23 @@ const Login = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user && profile && !loading) {
-      console.log("Redirecting user:", { 
+      console.log("Login: User already authenticated, redirecting:", { 
         email: user.email, 
         role: profile.role, 
         roleType: typeof profile.role,
-        fullProfile: profile 
+        profileId: profile.id 
       });
-      const dashboardRoute = `/${profile.role}`;
-      console.log("Navigating to:", dashboardRoute);
-      navigate(dashboardRoute, { replace: true });
+      
+      // Ensure role is valid before redirecting
+      if (['student', 'teacher', 'admin'].includes(profile.role)) {
+        const dashboardRoute = `/${profile.role}`;
+        console.log("Login: Navigating to:", dashboardRoute);
+        navigate(dashboardRoute, { replace: true });
+      } else {
+        console.error("Login: Invalid role detected, forcing logout");
+        // Force logout if invalid role
+        window.location.href = '/login';
+      }
     }
   }, [user, profile, loading, navigate]);
 
@@ -51,13 +59,6 @@ const Login = () => {
         description: "You have been successfully logged in.",
       });
 
-      // Wait a bit for profile to load, then redirect
-      setTimeout(() => {
-        if (profile) {
-          console.log("Manual redirect after login:", profile.role);
-          navigate(`/${profile.role}`, { replace: true });
-        }
-      }, 1000);
     } catch (error) {
       toast({
         variant: "destructive",

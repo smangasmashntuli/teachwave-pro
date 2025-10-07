@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, LogOut, Home, Users, FileText, Video, Settings, BarChart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { useSessionManagement } from "@/hooks/useSessionManagement";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -12,6 +13,9 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
+  
+  // Initialize session management
+  useSessionManagement();
 
   if (!profile) return null;
 
@@ -19,18 +23,25 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   const handleLogout = async () => {
     try {
-      await signOut();
       toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
+        title: "Logging out...",
+        description: "Please wait while we sign you out.",
       });
-      navigate("/");
+      
+      // The signOut function will handle navigation
+      await signOut();
     } catch (error) {
+      console.error("Logout error:", error);
       toast({
         variant: "destructive",
         title: "Logout failed",
-        description: "Please try again.",
+        description: "Please try again or refresh the page.",
       });
+      
+      // Force refresh if logout fails
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
     }
   };
 

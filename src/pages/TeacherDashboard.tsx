@@ -1,398 +1,509 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, FileText, Video, BarChart, Upload, Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Users, FileText, Video, BarChart, Upload, Calendar, TrendingUp, Clock, AlertTriangle, Star, GraduationCap } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { supabase } from "@/integrations/supabase/client";
+import UploadContent from "@/components/teacher/UploadContent";
+import CreateAssignment from "@/components/teacher/CreateAssignment";
+import ScheduleClass from "@/components/teacher/ScheduleClass";
+import Analytics from "@/components/teacher/Analytics";
+import TakeAttendance from "@/components/teacher/TakeAttendance";
+import StartClass from "@/components/teacher/StartClass";
+import GradeTracker from "@/components/teacher/GradeTracker";
+import { AuthContext } from "@/contexts/AuthContext";
+import { getDashboardService, type ClassWithStats, type StudentWithProgress, type AssignmentWithStats } from "@/integrations/supabase/dashboard";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-
-interface TeacherStats {
-  totalStudents: number;
-  subjectsTeaching: number;
-  classesThisWeek: number;
-  pendingGrading: number;
-}
-
-interface TeacherAssignment {
-  id: string;
-  subject: {
-    id: string;
-    name: string;
-    grade: {
-      id: string;
-      name: string;
-    };
-  };
-}
-
-interface UpcomingClass {
-  id: string;
-  title: string;
-  subject_name: string;
-  grade_name: string;
-  scheduled_start: string;
-  scheduled_end: string;
-  student_count: number;
-}
-
-interface VirtualClass {
-  id: string;
-  title: string;
-  scheduled_start: string;
-  scheduled_end: string;
-  subject: {
-    name: string;
-    grade: {
-      name: string;
-    };
-  };
-}
-
-interface RecentActivity {
-  id: string;
-  action: string;
-  subject: string;
-  count: string;
-  created_at: string;
-}
 
 const TeacherDashboard = () => {
-  const { user } = useAuth();
-  const [stats, setStats] = useState<TeacherStats>({
+  const { user } = useContext(AuthContext);
+  
+  // Modal states
+  const [showUploadContent, setShowUploadContent] = useState(false);
+  const [showCreateAssignment, setShowCreateAssignment] = useState(false);
+  const [showScheduleClass, setShowScheduleClass] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showTakeAttendance, setShowTakeAttendance] = useState(false);
+  const [showStartClass, setShowStartClass] = useState(false);
+  const [showGradeTracker, setShowGradeTracker] = useState(false);
+  
+  // Data states
+  const [classes, setClasses] = useState<ClassWithStats[]>([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalClasses: 0,
     totalStudents: 0,
-    subjectsTeaching: 0,
-    classesThisWeek: 0,
-    pendingGrading: 0,
+    averageGrade: 0,
+    recentActivity: 0,
+    classGrowth: 0,
+    studentEngagement: 0
   });
-  const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [recentGrades, setRecentGrades] = useState<any[]>([]);
+  const [upcomingClasses, setUpcomingClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedClass, setSelectedClass] = useState<ClassWithStats | null>(null);
+  const [realTimeChannel, setRealTimeChannel] = useState<any>(null);
 
+  const teacherId = user?.id || '';
+  const dashboardService = getDashboardService(teacherId);
+
+  // Load dashboard data
   useEffect(() => {
-    if (user?.id) {
-      fetchTeacherData();
+    if (teacherId) {
+      loadDashboardData();
+      setupRealTimeSubscription();
     }
-  }, [user?.id]);
+    
+    return () => {
+      if (realTimeChannel) {
+        realTimeChannel.unsubscribe();
+      }
+    };
+  }, [teacherId]);
 
-  const fetchTeacherData = async () => {
+  const loadDashboardData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      const [classesData, statsData] = await Promise.all([
+        dashboardService.getClassesWithStats(),
+        dashboardService.getDashboardAnalytics()
+      ]);
 
-      // Fetch subjects teaching
-      const { data: teacherAssignments, error: assignmentsError } = await supabase
-        .from('teacher_assignments')
-        .select(`
-          id,
-          subject:subjects(id, name, code, grade:grades(name))
-        `)
-        .eq('teacher_id', user?.id)
-        .eq('is_active', true);
+      setClasses(classesData);
+      setDashboardStats(statsData);
 
-      if (assignmentsError) throw assignmentsError;
-
-      // Type the data properly
-      const typedTeacherAssignments = teacherAssignments as TeacherAssignment[];
-
-      // Fetch total students enrolled in teacher's subjects
-      let totalStudents = 0;
-      if (typedTeacherAssignments && typedTeacherAssignments.length > 0) {
-        const subjectIds = typedTeacherAssignments.map(a => a.subject.id);
-        
-        for (const subjectId of subjectIds) {
-          const { count, error: enrollmentError } = await supabase
-            .from('student_enrollments')
-            .select('*', { count: 'exact', head: true })
-            .eq('grade_id', typedTeacherAssignments.find(a => a.subject.id === subjectId)?.subject.grade.id)
-            .eq('is_active', true);
-
-          if (enrollmentError) throw enrollmentError;
-          totalStudents += count || 0;
-        }
+      // Load recent grades for the first class
+      if (classesData.length > 0) {
+        const recentGradesData = await dashboardService.getRecentGrades(classesData[0].id);
+        setRecentGrades(recentGradesData);
       }
 
-      // Fetch upcoming classes (this week)
-      const startOfWeek = new Date();
-      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-      const endOfWeek = new Date();
-      endOfWeek.setDate(endOfWeek.getDate() + (6 - endOfWeek.getDay()));
+      // Generate upcoming classes from schedule
+      const upcoming = generateUpcomingClasses(classesData);
+      setUpcomingClasses(upcoming);
 
-      const { data: classes, error: classesError } = await supabase
-        .from('virtual_classes')
-        .select(`
-          id,
-          title,
-          scheduled_start,
-          scheduled_end,
-          subject:subjects(name, grade:grades(name))
-        `)
-        .eq('teacher_id', user?.id)
-        .gte('scheduled_start', startOfWeek.toISOString())
-        .lte('scheduled_start', endOfWeek.toISOString())
-        .order('scheduled_start', { ascending: true })
-        .limit(5);
-
-      if (classesError) throw classesError;
-
-      // Type the classes data
-      const typedClasses = classes as VirtualClass[];
-
-      // Fetch pending quiz submissions for grading
-      const { count: pendingCount, error: pendingError } = await supabase
-        .from('quiz_attempts')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_completed', true)
-        .is('total_score', null);
-
-      if (pendingError) throw pendingError;
-
-      // Mock recent activity (you can enhance this with actual activity tracking)
-      const mockActivity: RecentActivity[] = [
-        { id: '1', action: 'New quiz created', subject: typedTeacherAssignments?.[0]?.subject.name || 'Subject', count: 'Just now', created_at: new Date().toISOString() },
-        { id: '2', action: 'Class completed', subject: typedTeacherAssignments?.[1]?.subject.name || 'Subject', count: '2 hours ago', created_at: new Date().toISOString() },
-      ];
-
-      setStats({
-        totalStudents,
-        subjectsTeaching: typedTeacherAssignments?.length || 0,
-        classesThisWeek: typedClasses?.length || 0,
-        pendingGrading: pendingCount || 0,
-      });
-
-      setUpcomingClasses(typedClasses?.map(cls => ({
-        id: cls.id,
-        title: cls.title,
-        subject_name: cls.subject.name,
-        grade_name: cls.subject.grade.name,
-        scheduled_start: cls.scheduled_start,
-        scheduled_end: cls.scheduled_end,
-        student_count: Math.floor(Math.random() * 30) + 20, // Mock student count
-      })) || []);
-
-      setRecentActivity(mockActivity);
-
-    } catch (error: any) {
-      console.error('Error fetching teacher data:', error);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
       toast({
-        variant: "destructive",
         title: "Error",
-        description: "Failed to load dashboard data"
+        description: "Failed to load dashboard data. Please refresh the page.",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
-
-    let dayLabel = '';
-    if (date.toDateString() === today.toDateString()) {
-      dayLabel = 'Today';
-    } else if (date.toDateString() === tomorrow.toDateString()) {
-      dayLabel = 'Tomorrow';
-    } else {
-      dayLabel = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const setupRealTimeSubscription = () => {
+    if (classes.length > 0) {
+      const channel = dashboardService.subscribeToClassChanges(classes[0].id, (payload) => {
+        console.log('Real-time update:', payload);
+        // Refresh data when changes occur
+        loadDashboardData();
+      });
+      setRealTimeChannel(channel);
     }
+  };
 
-    const timeLabel = date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
-
-    return `${dayLabel}, ${timeLabel}`;
+  const generateUpcomingClasses = (classesData: ClassWithStats[]) => {
+    return classesData.map(cls => ({
+      id: cls.id,
+      subject: `${cls.title} - ${cls.grade_level}`,
+      time: cls.schedule_time ? `${cls.schedule_day}, ${cls.schedule_time}` : 'Not scheduled',
+      students: cls.enrolled_students,
+      classData: cls
+    }));
   };
 
   const quickStats = [
-    { label: "Total Students", value: stats.totalStudents.toString(), icon: Users, color: "text-blue-600" },
-    { label: "Subjects Teaching", value: stats.subjectsTeaching.toString(), icon: FileText, color: "text-green-600" },
-    { label: "Classes This Week", value: stats.classesThisWeek.toString(), icon: Video, color: "text-purple-600" },
-    { label: "Pending Grading", value: stats.pendingGrading.toString(), icon: BarChart, color: "text-orange-600" },
+    { 
+      label: "Active Classes", 
+      value: dashboardStats.totalClasses.toString(), 
+      icon: FileText, 
+      color: "text-blue-500",
+      trend: dashboardStats.classGrowth > 0 ? `+${dashboardStats.classGrowth}` : null
+    },
+    { 
+      label: "Total Students", 
+      value: dashboardStats.totalStudents.toString(), 
+      icon: Users, 
+      color: "text-green-500",
+      trend: null
+    },
+    { 
+      label: "Average Grade", 
+      value: `${dashboardStats.averageGrade}%`, 
+      icon: GraduationCap, 
+      color: "text-purple-500",
+      trend: dashboardStats.averageGrade >= 80 ? "Excellent" : dashboardStats.averageGrade >= 70 ? "Good" : "Needs Attention"
+    },
+    { 
+      label: "Recent Activity", 
+      value: dashboardStats.recentActivity.toString(), 
+      icon: TrendingUp, 
+      color: "text-orange-500",
+      trend: dashboardStats.studentEngagement > 0 ? "Active" : null
+    },
   ];
 
+  if (loading) {
+    return (
+      <DashboardLayout role="teacher" userName={user?.email?.split('@')[0] || 'Teacher'}>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
-    <DashboardLayout>
+    <DashboardLayout role="teacher" userName={user?.email?.split('@')[0] || 'Teacher'}>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Teacher Dashboard</h1>
-          <p className="text-muted-foreground mt-2">Manage your classes and students</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Teacher Dashboard</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage your classes and students • Last updated: {new Date().toLocaleTimeString()}
+            </p>
+          </div>
+          <Badge variant="default" className="bg-green-500">
+            <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+            Live Data
+          </Badge>
         </div>
 
         {/* Quick Stats */}
-        {loading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((index) => (
-              <Card key={index} className="shadow-soft">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {quickStats.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={index} className="shadow-soft hover:shadow-medium transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
-                  <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {stat.label}
+                  </CardTitle>
+                  <Icon className={`h-4 w-4 ${stat.color}`} />
                 </CardHeader>
                 <CardContent>
-                  <div className="h-8 bg-gray-200 rounded animate-pulse w-16"></div>
+                  <div className="text-3xl font-bold">{stat.value}</div>
+                  {stat.trend && (
+                    <Badge variant="outline" className="mt-2 text-xs">
+                      {stat.trend}
+                    </Badge>
+                  )}
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {quickStats.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={index} className="shadow-soft hover:shadow-medium transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      {stat.label}
-                    </CardTitle>
-                    <Icon className={`h-4 w-4 ${stat.color}`} />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{stat.value}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Real-time from database
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Upcoming Classes */}
-          <Card className="shadow-soft">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                <CardTitle>Upcoming Classes</CardTitle>
-              </div>
-              <CardDescription>Your scheduled sessions</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {loading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((index) => (
-                    <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                      <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-32"></div>
-                        <div className="h-3 bg-gray-200 rounded animate-pulse w-24"></div>
-                      </div>
-                      <div className="text-right space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
-                        <div className="h-6 bg-gray-200 rounded animate-pulse w-16"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : upcomingClasses.length > 0 ? (
-                upcomingClasses.map((cls, index) => (
-                  <div key={cls.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                    <div>
-                      <p className="font-medium">{cls.title}</p>
-                      <p className="text-sm text-muted-foreground">{cls.subject_name} - {cls.grade_name}</p>
-                      <p className="text-xs text-muted-foreground">{cls.student_count} students</p>
-                    </div>
-                    <div className="text-sm text-right">
-                      <p className="font-medium">{formatDateTime(cls.scheduled_start)}</p>
-                      <Button size="sm" variant="link" className="h-auto p-0">
-                        Start Class
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p>No upcoming classes this week</p>
-                </div>
-              )}
-              <div className="pt-4">
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={fetchTeacherData}
-                  disabled={loading}
-                >
-                  {loading ? "Refreshing..." : "Refresh Data"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card className="shadow-soft">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <BarChart className="h-5 w-5 text-secondary" />
-                <CardTitle>Recent Activity</CardTitle>
-              </div>
-              <CardDescription>Latest updates from your classes</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {loading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((index) => (
-                    <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                      <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-32"></div>
-                        <div className="h-3 bg-gray-200 rounded animate-pulse w-24"></div>
-                      </div>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : recentActivity.length > 0 ? (
-                recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                    <div>
-                      <p className="font-medium">{activity.action}</p>
-                      <p className="text-sm text-muted-foreground">{activity.subject}</p>
-                    </div>
-                    <div className="text-sm font-medium">
-                      {activity.count}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p>No recent activity</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            );
+          })}
         </div>
 
-        {/* Quick Actions */}
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            <Button>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Content
-            </Button>
-            <Button variant="outline">
-              <FileText className="mr-2 h-4 w-4" />
-              Create Assignment
-            </Button>
-            <Button variant="outline">
-              <Video className="mr-2 h-4 w-4" />
-              Schedule Class
-            </Button>
-            <Button variant="outline">
-              <BarChart className="mr-2 h-4 w-4" />
-              View Analytics
-            </Button>
-            <Button variant="outline">
-              <Users className="mr-2 h-4 w-4" />
-              Take Attendance
-            </Button>
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="classes">My Classes</TabsTrigger>
+            <TabsTrigger value="students">Students</TabsTrigger>
+            <TabsTrigger value="grades">Recent Grades</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6 mt-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Upcoming Classes */}
+              <Card className="shadow-soft">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <CardTitle>Upcoming Classes</CardTitle>
+                  </div>
+                  <CardDescription>Your scheduled sessions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-64">
+                    <div className="space-y-4">
+                      {upcomingClasses.map((cls, index) => (
+                        <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                          <div>
+                            <p className="font-medium">{cls.subject}</p>
+                            <p className="text-sm text-muted-foreground">{cls.students} students enrolled</p>
+                          </div>
+                          <div className="text-sm text-right">
+                            <p className="font-medium">{cls.time}</p>
+                            <Button 
+                              size="sm" 
+                              variant="link" 
+                              className="h-auto p-0"
+                              onClick={() => {
+                                setSelectedClass(cls.classData);
+                                setShowStartClass(true);
+                              }}
+                            >
+                              Start Class
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      {upcomingClasses.length === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>No upcoming classes scheduled</p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              {/* Recent Grades */}
+              <Card className="shadow-soft">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="h-5 w-5 text-secondary" />
+                      <CardTitle>Recent Grades</CardTitle>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowGradeTracker(true)}
+                    >
+                      View All
+                    </Button>
+                  </div>
+                  <CardDescription>Latest graded assignments</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-64">
+                    <div className="space-y-4">
+                      {recentGrades.map((grade, index) => (
+                        <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                          <div>
+                            <p className="font-medium">{grade.student_name}</p>
+                            <p className="text-sm text-muted-foreground">{grade.assignment_title}</p>
+                          </div>
+                          <div className="text-right">
+                            <Badge 
+                              variant={grade.percentage >= 80 ? "default" : grade.percentage >= 60 ? "secondary" : "destructive"}
+                              className="text-sm"
+                            >
+                              {grade.percentage}%
+                            </Badge>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(grade.graded_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {recentGrades.length === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <GraduationCap className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>No recent grades to display</p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Actions */}
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-3">
+                <Button onClick={() => setShowUploadContent(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Content
+                </Button>
+                <Button variant="outline" onClick={() => setShowCreateAssignment(true)}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Create Assignment
+                </Button>
+                <Button variant="outline" onClick={() => setShowScheduleClass(true)}>
+                  <Video className="mr-2 h-4 w-4" />
+                  Schedule Class
+                </Button>
+                <Button variant="outline" onClick={() => setShowAnalytics(true)}>
+                  <BarChart className="mr-2 h-4 w-4" />
+                  View Analytics
+                </Button>
+                <Button variant="outline" onClick={() => setShowTakeAttendance(true)}>
+                  <Users className="mr-2 h-4 w-4" />
+                  Take Attendance
+                </Button>
+                <Button variant="outline" onClick={() => setShowGradeTracker(true)}>
+                  <GraduationCap className="mr-2 h-4 w-4" />
+                  Grade Tracker
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="classes" className="space-y-4 mt-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {classes.map((cls) => (
+                <Card key={cls.id} className="shadow-soft hover:shadow-medium transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{cls.title}</CardTitle>
+                      <Badge variant="outline">{cls.grade_level}</Badge>
+                    </div>
+                    <CardDescription>{cls.subject}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-primary">{cls.enrolled_students}</p>
+                        <p className="text-xs text-muted-foreground">Students</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-green-500">{cls.average_grade}%</p>
+                        <p className="text-xs text-muted-foreground">Avg Grade</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Attendance Rate</span>
+                        <span>{cls.attendance_rate}%</span>
+                      </div>
+                      <Progress value={cls.attendance_rate} className="h-2" />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedClass(cls);
+                          setShowStartClass(true);
+                        }}
+                      >
+                        <Video className="h-3 w-3 mr-1" />
+                        Start Class
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowGradeTracker(true)}
+                      >
+                        <GraduationCap className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {classes.length === 0 && (
+                <div className="col-span-full text-center py-12 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No classes found. Create your first class!</p>
+                  <Button className="mt-4" onClick={() => setShowScheduleClass(true)}>
+                    Create Class
+                  </Button>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="students" className="space-y-4 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Student Overview</CardTitle>
+                <CardDescription>Select a class to view student details</CardDescription>
+              </CardHeader>
+              <CardContent className="text-center py-8">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-muted-foreground">Choose a class from the Classes tab to view student information</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="grades" className="space-y-4 mt-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Grade Management</h3>
+              <Button onClick={() => setShowGradeTracker(true)}>
+                <GraduationCap className="mr-2 h-4 w-4" />
+                Open Grade Tracker
+              </Button>
+            </div>
+            
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {classes.map((cls) => (
+                <Card key={cls.id} className="shadow-soft">
+                  <CardHeader>
+                    <CardTitle className="text-base">{cls.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm">Class Average:</span>
+                        <Badge variant={cls.average_grade >= 80 ? "default" : cls.average_grade >= 60 ? "secondary" : "destructive"}>
+                          {cls.average_grade}%
+                        </Badge>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setShowGradeTracker(true)}
+                      >
+                        Manage Grades
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
+
+      {/* Modal Components */}
+      <UploadContent 
+        isOpen={showUploadContent} 
+        onClose={() => setShowUploadContent(false)} 
+      />
+      
+      <CreateAssignment 
+        isOpen={showCreateAssignment} 
+        onClose={() => setShowCreateAssignment(false)} 
+      />
+      
+      <ScheduleClass 
+        isOpen={showScheduleClass} 
+        onClose={() => setShowScheduleClass(false)} 
+      />
+      
+      <Analytics 
+        isOpen={showAnalytics} 
+        onClose={() => setShowAnalytics(false)} 
+      />
+      
+      <TakeAttendance 
+        isOpen={showTakeAttendance} 
+        onClose={() => setShowTakeAttendance(false)} 
+      />
+      
+      <StartClass 
+        isOpen={showStartClass} 
+        onClose={() => setShowStartClass(false)}
+        classInfo={selectedClass ? {
+          title: selectedClass.title,
+          subject: selectedClass.subject,
+          grade: selectedClass.grade_level, 
+          students: selectedClass.enrolled_students,
+          time: selectedClass.schedule_time || "Now"
+        } : undefined}
+      />
+      
+      <GradeTracker
+        isOpen={showGradeTracker}
+        onClose={() => setShowGradeTracker(false)}
+        classId={selectedClass?.id}
+        teacherId={teacherId}
+      />
     </DashboardLayout>
   );
 };

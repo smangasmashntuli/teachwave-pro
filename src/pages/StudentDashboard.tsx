@@ -8,6 +8,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import StudentGroupSelection from "@/components/student/StudentGroupSelection";
 
 interface StudentStats {
   enrolledSubjects: number;
@@ -25,6 +26,7 @@ const StudentDashboard = () => {
     attendanceRate: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [hasEnrollment, setHasEnrollment] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -41,12 +43,21 @@ const StudentDashboard = () => {
     try {
       setLoading(true);
 
-      // Fetch student enrollments
-      const { data: enrollments } = await supabase
+      // Check if student has an active enrollment
+      const { data: enrollments } = await (supabase as any)
         .from('student_enrollments')
         .select('*')
         .eq('student_id', user.id)
         .eq('is_active', true);
+
+      const hasActiveEnrollment = enrollments && enrollments.length > 0;
+      setHasEnrollment(hasActiveEnrollment);
+
+      // If no enrollment, stop here and show selection component
+      if (!hasActiveEnrollment) {
+        setLoading(false);
+        return;
+      }
 
       const enrolledSubjects = enrollments?.length || 0;
 
@@ -114,6 +125,15 @@ const StudentDashboard = () => {
             ))}
           </div>
         </div>
+      </DashboardLayout>
+    );
+  }
+
+  // If student hasn't selected grade and subjects yet, show selection component
+  if (hasEnrollment === false) {
+    return (
+      <DashboardLayout>
+        <StudentGroupSelection />
       </DashboardLayout>
     );
   }

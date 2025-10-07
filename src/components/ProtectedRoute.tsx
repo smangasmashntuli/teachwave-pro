@@ -31,7 +31,15 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     );
   }
 
+  // If no user or no profile, redirect to login
   if (!user || !profile) {
+    console.log("ProtectedRoute: No user or profile, redirecting to login");
+    return <Navigate to="/login" replace />;
+  }
+
+  // Additional check for profile validity
+  if (!profile.role || !['student', 'teacher', 'admin'].includes(profile.role)) {
+    console.error("ProtectedRoute: Invalid or missing role", profile.role);
     return <Navigate to="/login" replace />;
   }
 
