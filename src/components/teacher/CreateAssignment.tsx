@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,18 +13,33 @@ import { FileText, X, CalendarIcon, Clock, Users, Upload } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Subject {
+  id: string;
+  name: string;
+  grades: {
+    id: string;
+    name: string;
+  };
+}
 
 interface CreateAssignmentProps {
   isOpen: boolean;
   onClose: () => void;
+  subjectId?: string; // Optional pre-selected subject
+  onAssignmentCreated?: () => void; // Callback to refresh parent data
 }
 
-const CreateAssignment = ({ isOpen, onClose }: CreateAssignmentProps) => {
+const CreateAssignment = ({ isOpen, onClose, subjectId, onAssignmentCreated }: CreateAssignmentProps) => {
+  const { user } = useAuth();
+  
+  // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [subject, setSubject] = useState("");
-  const [grade, setGrade] = useState("");
+  const [subject, setSubject] = useState(subjectId || "");
   const [totalMarks, setTotalMarks] = useState("");
   const [dueDate, setDueDate] = useState<Date>();
   const [dueTime, setDueTime] = useState("");
@@ -34,8 +49,55 @@ const CreateAssignment = ({ isOpen, onClose }: CreateAssignmentProps) => {
   const [isPublished, setIsPublished] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const subjects = ["Mathematics", "Science", "English", "History", "Geography", "Physics", "Chemistry", "Biology"];
-  const grades = ["Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
+  // Dynamic data from database
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Load teacher's assigned subjects when component opens
+  useEffect(() => {
+    if (isOpen && user) {
+      loadTeacherSubjects();
+    }
+  }, [isOpen, user]);
+
+  const loadTeacherSubjects = async () => {
+    setLoading(true);
+    try {
+      // Get subjects assigned to this teacher
+      const { data: teacherAssignments, error } = await supabase
+        .from('teacher_assignments')
+        .select(`
+          subjects (
+            id,
+            name,
+            grades (
+              id,
+              name
+            )
+          )
+        `)
+        .eq('teacher_id', user?.id);
+
+      if (error) throw error;
+
+      const subjectsData = teacherAssignments?.map((ta: any) => ({
+        id: ta.subjects.id,
+        name: ta.subjects.name,
+        grades: ta.subjects.grades
+      })) || [];
+
+      setSubjects(subjectsData);
+    } catch (error) {
+      console.error('Error loading teacher subjects:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load your assigned subjects. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(event.target.files || []);
@@ -51,20 +113,80 @@ const CreateAssignment = ({ isOpen, onClose }: CreateAssignmentProps) => {
     setCreating(true);
 
     try {
-      // Simulate assignment creation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Combine due date and time
+      let dueDatetime = null;
+      if (dueDate && dueTime) {
+        const [hours, minutes] = dueTime.split(':').map(Number);
+        dueDatetime = new Date(dueDate);
+        dueDatetime.setHours(hours, minutes);
+      } else if (dueDate) {
+        dueDatetime = new Date(dueDate);
+        dueDatetime.setHours(23, 59); // Default to end of day
+      }
+
+      // Upload attachments to storage if any
+      const uploadedAttachments = [];
+      for (const file of attachments) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `assignments/${user.id}/${fileName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('learning-materials')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          console.error('File upload error:', uploadError);
+          // Continue with assignment creation even if file upload fails
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('learning-materials')
+            .getPublicUrl(filePath);
+
+          uploadedAttachments.push({
+            name: file.name,
+            url: publicUrl,
+            size: file.size,
+            type: file.type
+          });
+        }
+      }
+
+      // Create assignment in database
+      const assignmentData = {
+        title,
+        description: description || null,
+        submission_instructions: instructions,
+        subject_id: subject,
+        teacher_id: user.id,
+        total_marks: parseInt(totalMarks),
+        due_date: dueDatetime?.toISOString() || null,
+        is_published: isPublished
+      };
+
+      const { error: dbError } = await (supabase as any)
+        .from('assignments')
+        .insert([assignmentData]);
+
+      if (dbError) throw dbError;
+
+      // Get subject name for toast message
+      const selectedSubject = subjects.find(s => s.id === subject);
       
       toast({
         title: "Assignment Created Successfully",
-        description: `${title} has been ${isPublished ? 'published' : 'saved as draft'} for ${subject} - ${grade}`,
+        description: `${title} has been ${isPublished ? 'published' : 'saved as draft'} for ${selectedSubject?.name || 'the selected subject'}`,
       });
 
       // Reset form
       setTitle("");
       setDescription("");
       setInstructions("");
-      setSubject("");
-      setGrade("");
+      setSubject(subjectId || ""); // Keep pre-selected subject if provided
       setTotalMarks("");
       setDueDate(undefined);
       setDueTime("");
@@ -72,12 +194,19 @@ const CreateAssignment = ({ isOpen, onClose }: CreateAssignmentProps) => {
       setLatePenalty("");
       setAttachments([]);
       setIsPublished(false);
+      
+      // Notify parent component to refresh data
+      if (onAssignmentCreated) {
+        onAssignmentCreated();
+      }
+      
       onClose();
     } catch (error) {
+      console.error('Assignment creation error:', error);
       toast({
         variant: "destructive",
         title: "Creation Failed",
-        description: "There was an error creating the assignment. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error creating the assignment. Please try again.",
       });
     } finally {
       setCreating(false);
@@ -139,33 +268,35 @@ const CreateAssignment = ({ isOpen, onClose }: CreateAssignmentProps) => {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="subject">Subject</Label>
-                  <Select value={subject} onValueChange={setSubject} required>
+                  <Select value={subject} onValueChange={setSubject} required disabled={loading || !!subjectId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select subject" />
+                      <SelectValue placeholder={loading ? "Loading subjects..." : "Select subject"} />
                     </SelectTrigger>
                     <SelectContent>
                       {subjects.map((subj) => (
-                        <SelectItem key={subj} value={subj}>
-                          {subj}
+                        <SelectItem key={subj.id} value={subj.id}>
+                          {subj.name} {subj.grades?.name && `(${subj.grades.name})`}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {subjects.length === 0 && !loading && (
+                    <p className="text-sm text-muted-foreground">
+                      No subjects assigned. Contact admin to assign subjects to your profile.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="grade">Grade</Label>
-                  <Select value={grade} onValueChange={setGrade} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select grade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {grades.map((g) => (
-                        <SelectItem key={g} value={g}>
-                          {g}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="totalMarks">Total Marks</Label>
+                  <Input
+                    id="totalMarks"
+                    type="number"
+                    value={totalMarks}
+                    onChange={(e) => setTotalMarks(e.target.value)}
+                    placeholder="100"
+                    min="1"
+                    required
+                  />
                 </div>
               </div>
 

@@ -9,7 +9,15 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import StudentDashboard from "./pages/StudentDashboard";
+import StudentSubjects from "./pages/StudentSubjects";
+import StudentAssignments from "./pages/StudentAssignments";
+import StudentClasses from "./pages/StudentClasses";
+import StudentGrades from "./pages/StudentGrades";
+import SubjectDetail from "./pages/SubjectDetail";
 import TeacherDashboard from "./pages/TeacherDashboard";
+import TeacherSubjects from "./pages/TeacherSubjects";
+import TeacherSubjectDetail from "./pages/TeacherSubjectDetail";
+import VirtualClassroom from "./pages/VirtualClassroom";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudentGroupSelectionDemo from "./pages/StudentGroupSelectionDemo";
 import NotFound from "./pages/NotFound";
@@ -43,11 +51,84 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            {/* Student sub-routes */}
+            <Route
+              path="/student/subjects"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <StudentSubjects />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/subjects/:id"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <SubjectDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/assignments"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <StudentAssignments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/classes"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <StudentClasses />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/grades"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <StudentGrades />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/classroom/:id"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <VirtualClassroom />
+                </ProtectedRoute>
+              }
+            />
             <Route 
               path="/teacher" 
               element={
                 <ProtectedRoute allowedRoles={["teacher"]}>
                   <TeacherDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/teacher/subjects" 
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <TeacherSubjects />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/teacher/subjects/:id" 
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <TeacherSubjectDetail />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/teacher/subjects/:id/classroom" 
+              element={
+                <ProtectedRoute allowedRoles={["teacher", "student"]}>
+                  <VirtualClassroom />
                 </ProtectedRoute>
               } 
             />

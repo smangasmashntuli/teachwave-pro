@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, FileText, Video, BarChart, Upload, Calendar, TrendingUp, Clock, AlertTriangle, Star, GraduationCap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import UploadContent from "@/components/teacher/UploadContent";
 import CreateAssignment from "@/components/teacher/CreateAssignment";
@@ -16,10 +17,12 @@ import StartClass from "@/components/teacher/StartClass";
 import GradeTracker from "@/components/teacher/GradeTracker";
 import { AuthContext } from "@/contexts/AuthContext";
 import { getDashboardService, type ClassWithStats, type StudentWithProgress, type AssignmentWithStats } from "@/integrations/supabase/dashboard";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 const TeacherDashboard = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   
   // Modal states
   const [showUploadContent, setShowUploadContent] = useState(false);
@@ -54,13 +57,19 @@ const TeacherDashboard = () => {
     if (teacherId) {
       loadDashboardData();
       setupRealTimeSubscription();
+      
+      // Set up auto-refresh every 5 minutes for real-time updates
+      const interval = setInterval(() => {
+        loadDashboardData();
+      }, 5 * 60 * 1000);
+
+      return () => {
+        clearInterval(interval);
+        if (realTimeChannel) {
+          realTimeChannel.unsubscribe();
+        }
+      };
     }
-    
-    return () => {
-      if (realTimeChannel) {
-        realTimeChannel.unsubscribe();
-      }
-    };
   }, [teacherId]);
 
   const loadDashboardData = async () => {
@@ -80,8 +89,8 @@ const TeacherDashboard = () => {
         setRecentGrades(recentGradesData);
       }
 
-      // Generate upcoming classes from schedule
-      const upcoming = generateUpcomingClasses(classesData);
+      // Load real upcoming classes from database
+      const upcoming = await loadRealUpcomingClasses();
       setUpcomingClasses(upcoming);
 
     } catch (error) {
@@ -107,14 +116,48 @@ const TeacherDashboard = () => {
     }
   };
 
-  const generateUpcomingClasses = (classesData: ClassWithStats[]) => {
-    return classesData.map(cls => ({
-      id: cls.id,
-      subject: `${cls.title} - ${cls.grade_level}`,
-      time: cls.schedule_time ? `${cls.schedule_day}, ${cls.schedule_time}` : 'Not scheduled',
-      students: cls.enrolled_students,
-      classData: cls
-    }));
+  const loadRealUpcomingClasses = async () => {
+    try {
+      // Get actual upcoming virtual classes from database
+      const now = new Date().toISOString();
+      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      
+      const { data: upcomingClassesData, error } = await supabase
+        .from('virtual_classes')
+        .select(`
+          id,
+          title,
+          scheduled_start,
+          scheduled_end,
+          subjects (
+            name,
+            grades (name)
+          )
+        `)
+        .eq('teacher_id', teacherId)
+        .gte('scheduled_start', now)
+        .lte('scheduled_start', nextWeek)
+        .eq('status', 'scheduled')
+        .order('scheduled_start', { ascending: true })
+        .limit(10);
+
+      if (error) {
+        console.error('Error loading upcoming classes:', error);
+        return [];
+      }
+
+      return upcomingClassesData?.map((cls: any) => ({
+        id: cls.id,
+        subject: `${cls.subjects?.name || cls.title} - ${cls.subjects?.grades?.name || 'Unknown Grade'}`,
+        time: new Date(cls.scheduled_start).toLocaleString(),
+        duration: `${Math.round((new Date(cls.scheduled_end).getTime() - new Date(cls.scheduled_start).getTime()) / (1000 * 60))} min`,
+        students: 'Loading...', // We'll enhance this later
+        classData: cls
+      })) || [];
+    } catch (error) {
+      console.error('Error loading upcoming classes:', error);
+      return [];
+    }
   };
 
   const quickStats = [
@@ -150,7 +193,7 @@ const TeacherDashboard = () => {
 
   if (loading) {
     return (
-      <DashboardLayout role="teacher" userName={user?.email?.split('@')[0] || 'Teacher'}>
+      <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -159,7 +202,7 @@ const TeacherDashboard = () => {
   }
 
   return (
-    <DashboardLayout role="teacher" userName={user?.email?.split('@')[0] || 'Teacher'}>
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -222,17 +265,34 @@ const TeacherDashboard = () => {
                   <ScrollArea className="h-64">
                     <div className="space-y-4">
                       {upcomingClasses.map((cls, index) => (
-                        <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                          <div>
+                        <div key={cls.id || index} className="flex justify-between items-center p-3 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors">
+                          <div className="flex-1">
                             <p className="font-medium">{cls.subject}</p>
-                            <p className="text-sm text-muted-foreground">{cls.students} students enrolled</p>
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              <p className="flex items-center gap-2">
+                                <Clock className="h-3 w-3" />
+                                {cls.time}
+                              </p>
+                              {cls.duration && (
+                                <p className="flex items-center gap-2">
+                                  <Video className="h-3 w-3" />
+                                  Duration: {cls.duration}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-sm text-right">
-                            <p className="font-medium">{cls.time}</p>
+                          <div className="text-right">
                             <Button 
                               size="sm" 
-                              variant="link" 
-                              className="h-auto p-0"
+                              variant="outline" 
+                              className="mb-2"
+                              onClick={() => navigate('/teacher/subjects')}
+                            >
+                              View Details
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="default" 
                               onClick={() => {
                                 setSelectedClass(cls.classData);
                                 setShowStartClass(true);

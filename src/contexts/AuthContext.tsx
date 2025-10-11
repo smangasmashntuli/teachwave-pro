@@ -43,11 +43,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log("=== AUTH CONTEXT INIT ===");
     
-    // Get initial session with timeout
+    // Get initial session - no timeout, let network handle naturally
     const initAuth = async () => {
       try {
         console.log("Getting initial session...");
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn("Session error (but continuing):", error.message);
+        }
+        
         console.log("Got session:", !!session);
         
         setSession(session);
@@ -55,10 +60,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (session?.user) {
           console.log("User found, fetching profile...");
-          await fetchProfile(session.user.id);
+          // Don't await profile fetch to avoid blocking the UI
+          fetchProfile(session.user.id).catch(err => {
+            console.warn("Profile fetch failed, but user stays logged in:", err);
+          });
         }
       } catch (error) {
-        console.error("Auth init error:", error);
+        console.warn("Auth init error (continuing anyway):", error);
+        // Don't throw - let the app continue even with auth issues
       } finally {
         console.log("Setting loading to false");
         setLoading(false);
@@ -83,16 +92,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else if (session?.user) {
         console.log("Auth: User signed in, fetching profile");
         
-        // Set loading to false immediately after starting profile fetch
+        // Set loading to false immediately to avoid blocking UI
         setLoading(false);
         
-        try {
-          await fetchProfile(session.user.id);
-        } catch (error) {
-          console.error("Auth: fetchProfile failed:", error);
-        }
+        // Fetch profile without blocking - let user stay logged in even if this fails
+        fetchProfile(session.user.id).catch(error => {
+          console.warn("Auth: fetchProfile failed, but keeping user logged in:", error);
+          
+          // Create minimal profile to keep user authenticated
+          const minimalProfile = {
+            id: session.user.id,
+            email: session.user.email || "user@example.com",
+            full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || "User",
+            role: "student" as const, // Default role, can be updated later
+            avatar_url: null,
+            phone: null,
+            date_of_birth: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          setProfile(minimalProfile);
+        });
         
-        console.log("Auth: Profile fetch process complete");
+        console.log("Auth: Profile fetch process initiated");
       } else {
         console.log("Auth: No user, clearing profile");
         setProfile(null);
@@ -107,15 +130,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log("=== FETCHING USER PROFILE ===", userId);
     
     try {
-      console.log("Step 1: Attempting to get user info with timeout...");
+      console.log("Step 1: Getting user info...");
       
-      // Add timeout to auth call
-      const getUserPromise = supabase.auth.getUser();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('getUser timeout')), 5000)
-      );
-      
-      const { data: { user } } = await Promise.race([getUserPromise, timeoutPromise]) as any;
+      // Remove timeout - let Supabase handle network issues gracefully
+      const { data: { user } } = await supabase.auth.getUser();
       console.log("Step 1 complete: Got user info:", user?.email);
       
       if (user?.email) {
@@ -175,22 +193,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("=== PROFILE FETCH COMPLETE ===");
       
     } catch (error) {
-      console.log("Auth getUser failed or timed out, creating emergency profile:", error.message);
+      console.warn("Auth getUser failed, but keeping user logged in:", error.message);
       
-      // Emergency fallback
-      const emergencyProfile = {
-        id: userId,
-        email: "emergency@example.com",
-        full_name: "User",
-        role: "student" as const,
-        avatar_url: null,
-        phone: null,
-        date_of_birth: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      setProfile(emergencyProfile);
+      // Instead of creating emergency profile, try to preserve existing session
+      // Only create fallback if we absolutely must
+      if (!profile) {
+        const fallbackProfile = {
+          id: userId,
+          email: session?.user?.email || "user@example.com",
+          full_name: session?.user?.user_metadata?.full_name || "User",
+          role: "student" as const,
+          avatar_url: null,
+          phone: null,
+          date_of_birth: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log("Creating minimal profile to keep user logged in:", fallbackProfile);
+        setProfile(fallbackProfile);
+      }
     }
   };
 
@@ -233,6 +255,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       window.location.href = '/login';
     }
   };
+
+  // Add session refresh function for handling token expiration
+  const refreshSession = async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.warn("Session refresh failed:", error.message);
+        return false;
+      }
+      
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+        console.log("Session refreshed successfully");
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.warn("Session refresh error:", error);
+      return false;
+    }
+  };
+
+  // Automatically refresh session before expiry
+  useEffect(() => {
+    if (session?.expires_at) {
+      const expiresAt = session.expires_at * 1000; // Convert to milliseconds
+      const now = Date.now();
+      const timeUntilExpiry = expiresAt - now;
+      
+      // Refresh 5 minutes before expiry
+      const refreshTime = Math.max(0, timeUntilExpiry - 5 * 60 * 1000);
+      
+      if (refreshTime > 0) {
+        const timeoutId = setTimeout(() => {
+          console.log("Auto-refreshing session...");
+          refreshSession();
+        }, refreshTime);
+        
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [session?.expires_at]);
 
   const value = {
     user,

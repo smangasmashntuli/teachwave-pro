@@ -3,11 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, Clock, BookOpen, Trophy, CheckCircle } from "lucide-react";
+import { Calendar, Clock, BookOpen, Trophy, CheckCircle, FileText } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import StudentGroupSelection from "@/components/student/StudentGroupSelection";
 
 interface StudentStats {
@@ -17,14 +18,26 @@ interface StudentStats {
   attendanceRate: number;
 }
 
+interface RecentActivity {
+  id: string;
+  type: 'enrollment' | 'assignment' | 'class' | 'content';
+  title: string;
+  subject: string;
+  date: string;
+  icon: any;
+  iconColor: string;
+}
+
 const StudentDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<StudentStats>({
     enrolledSubjects: 0,
     upcomingClasses: 0,
     completedAssignments: 0,
     attendanceRate: 0,
   });
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasEnrollment, setHasEnrollment] = useState<boolean | null>(null);
 
@@ -33,6 +46,85 @@ const StudentDashboard = () => {
       fetchStudentData();
     }
   }, [user?.id]);
+
+  const fetchRecentActivity = async () => {
+    if (!user) return;
+
+    try {
+      const activities: RecentActivity[] = [];
+
+      // First get student's enrolled subject IDs
+      const { data: subjectEnrollments } = await supabase
+        .from('subject_enrollments')
+        .select('subject_id')
+        .eq('student_id', user.id)
+        .eq('is_active', true);
+
+      const enrolledSubjectIds = subjectEnrollments?.map((e: any) => e.subject_id) || [];
+
+      // Get recent assignments from enrolled subjects
+      const { data: recentAssignments } = enrolledSubjectIds.length > 0 ? await supabase
+        .from('assignments')
+        .select(`
+          id,
+          title,
+          due_date,
+          subjects (name)
+        `)
+        .in('subject_id', enrolledSubjectIds)
+        .order('created_at', { ascending: false })
+        .limit(3) : { data: [] };
+
+      // Get recent virtual classes
+      const { data: recentClasses } = await supabase
+        .from('virtual_classes')
+        .select(`
+          id,
+          class_name,
+          scheduled_start,
+          subject_id
+        `)
+        .order('scheduled_start', { ascending: false })
+        .limit(2);
+
+      // Add assignments to activity
+      if (recentAssignments) {
+        recentAssignments.forEach((assignment: any) => {
+          activities.push({
+            id: `assignment-${assignment.id}`,
+            type: 'assignment',
+            title: assignment.title,
+            subject: assignment.subjects?.name || 'Unknown Subject',
+            date: new Date(assignment.due_date).toLocaleDateString(),
+            icon: FileText,
+            iconColor: 'text-blue-500'
+          });
+        });
+      }
+
+      // Add classes to activity
+      if (recentClasses) {
+        recentClasses.forEach((classItem: any) => {
+          activities.push({
+            id: `class-${classItem.id}`,
+            type: 'class',
+            title: classItem.class_name || 'Class',
+            subject: 'Virtual Class',
+            date: new Date(classItem.scheduled_start).toLocaleDateString(),
+            icon: BookOpen,
+            iconColor: 'text-green-500'
+          });
+        });
+      }
+
+      // Sort by date and take most recent 5
+      activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setRecentActivity(activities.slice(0, 5));
+
+    } catch (error) {
+      console.error('Error fetching recent activity:', error);
+    }
+  };
 
   const fetchStudentData = async () => {
     if (!user?.id) {
@@ -59,7 +151,14 @@ const StudentDashboard = () => {
         return;
       }
 
-      const enrolledSubjects = enrollments?.length || 0;
+      // Count subject_enrollments (specific subjects) for the student
+      const { data: subjectEnrollments } = await (supabase as any)
+        .from('subject_enrollments')
+        .select('*')
+        .eq('student_id', user.id)
+        .eq('is_active', true);
+
+      const enrolledSubjects = subjectEnrollments?.length || 0;
 
       // Fetch upcoming classes count
       const { count: upcomingClassesCount } = await supabase
@@ -92,6 +191,9 @@ const StudentDashboard = () => {
         completedAssignments,
         attendanceRate,
       });
+
+      // Fetch recent activity
+      await fetchRecentActivity();
 
     } catch (error) {
       console.error('Error fetching student data:', error);
@@ -212,15 +314,27 @@ const StudentDashboard = () => {
               <CardDescription>Common tasks and activities</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => navigate('/student/subjects')}
+              >
                 <BookOpen className="mr-2 h-4 w-4" />
                 Browse Learning Materials
               </Button>
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => navigate('/student/classes')}
+              >
                 <Calendar className="mr-2 h-4 w-4" />
                 View Class Schedule
               </Button>
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => navigate('/student/assignments')}
+              >
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Take Available Quizzes
               </Button>
@@ -233,27 +347,27 @@ const StudentDashboard = () => {
               <CardDescription>Your latest interactions</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                <BookOpen className="h-6 w-6 text-blue-500" />
-                <div>
-                  <p className="font-medium">Enrolled in Mathematics</p>
-                  <p className="text-sm text-muted-foreground">2 days ago</p>
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity) => {
+                  const IconComponent = activity.icon;
+                  return (
+                    <div key={activity.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                      <IconComponent className={`h-6 w-6 ${activity.iconColor}`} />
+                      <div>
+                        <p className="font-medium">{activity.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {activity.subject} • {activity.date}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center text-muted-foreground py-4">
+                  <p>No recent activity found</p>
+                  <p className="text-sm">Complete assignments or attend classes to see activity here</p>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                <Trophy className="h-6 w-6 text-green-500" />
-                <div>
-                  <p className="font-medium">Completed Science Quiz</p>
-                  <p className="text-sm text-muted-foreground">1 week ago</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                <Calendar className="h-6 w-6 text-purple-500" />
-                <div>
-                  <p className="font-medium">Attended English Class</p>
-                  <p className="text-sm text-muted-foreground">1 week ago</p>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
