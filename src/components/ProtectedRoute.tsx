@@ -8,16 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { user, profile, loading } = useAuth();
-  
-  console.log("ProtectedRoute: Checking access", {
-    hasUser: !!user,
-    hasProfile: !!profile,
-    loading,
-    userRole: profile?.role,
-    allowedRoles,
-    currentPath: window.location.pathname
-  });
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -31,29 +22,12 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     );
   }
 
-  // If no user or no profile, redirect to login
-  if (!user || !profile) {
-    console.log("ProtectedRoute: No user or profile, redirecting to login");
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Additional check for profile validity
-  if (!profile.role || !['student', 'teacher', 'admin'].includes(profile.role)) {
-    console.error("ProtectedRoute: Invalid or missing role", profile.role);
-    return <Navigate to="/login" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(profile.role)) {
-    // Redirect to appropriate dashboard based on user role
-    console.log("ProtectedRoute: Role mismatch detected", {
-      userRole: profile.role,
-      allowedRoles,
-      roleType: typeof profile.role,
-      includes: allowedRoles.includes(profile.role)
-    });
-    const redirectTo = `/${profile.role}`;
-    console.log("ProtectedRoute: Redirecting to:", redirectTo);
-    return <Navigate to={redirectTo} replace />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to={`/${user.role}`} replace />;
   }
 
   return <>{children}</>;

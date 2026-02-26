@@ -360,13 +360,15 @@ ON DUPLICATE KEY UPDATE subject_id=VALUES(subject_id);
 -- ============================================
 -- DEFAULT USERS
 -- ============================================
+-- WARNING: Change these default credentials immediately after first login!
+-- You can create new admin users through the application after logging in.
 
--- Default Admin User (password: Admin123!)
+-- Default Admin User
 INSERT INTO users (id, email, password, full_name, role) VALUES
 (1, 'admin@teachwave.com', '$2a$10$VlUcHoYXojYINvtLUgZ1kuP3GVj6BDUS2/We1SXYDegZ7fWf43AOC', 'System Administrator', 'admin')
 ON DUPLICATE KEY UPDATE email=VALUES(email);
 
--- Default Teacher (password: Teacher123!)
+-- Default Teacher
 INSERT INTO users (id, email, password, full_name, role, phone) VALUES
 (2, 'teacher@teachwave.com', '$2a$10$dhdOFex/aWvxe95toPHNauMIdyhsUioNhMlx6RaSqbK/7Ru3SYq/y', 'Mr. Default Teacher', 'teacher', '0123456789')
 ON DUPLICATE KEY UPDATE email=VALUES(email);

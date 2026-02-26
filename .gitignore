@@ -17,6 +17,12 @@ dist-ssr
 .env.local
 .env.production
 
+# Database files with sensitive data
+*.sql.local
+database/seed-*.sql
+database/DEFAULT_CREDENTIALS.md
+!database/schema.sql
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
