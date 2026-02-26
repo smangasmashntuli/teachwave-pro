@@ -11,80 +11,44 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Signup = () => {
   const navigate = useNavigate();
-  const { signUp, user, profile, loading } = useAuth();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "",
-  });
+  const { signUp, user, loading } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [role, setRole] = useState("student");
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && profile && !loading) {
-      console.log("Redirecting signed up user:", { user: user.email, role: profile.role });
-      navigate(`/${profile.role}`, { replace: true });
+    if (user && !loading) {
+      navigate(`/${user.role}`, { replace: true });
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match",
-      });
-      return;
-    }
-
-    if (!formData.role) {
-      toast({
-        variant: "destructive",
-        title: "Role required",
-        description: "Please select your role",
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      // Create account with role-based email domain
-      const roleEmailMap = {
-        student: formData.email,
-        teacher: formData.email,
-        admin: formData.email
-      };
-
-      const { error } = await signUp(
-        roleEmailMap[formData.role as keyof typeof roleEmailMap], 
-        formData.password, 
-        formData.name
-      );
-
+      const { error } = await signUp(email, password, fullName, role);
+      
       if (error) {
         toast({
           variant: "destructive",
-          title: "Signup failed",
-          description: error.message,
+          title: "Registration failed",
+          description: error,
         });
         return;
       }
 
       toast({
         title: "Account created!",
-        description: "Please check your email to verify your account.",
+        description: "You have been successfully registered.",
       });
-      
-      navigate("/login");
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Signup failed",
+        title: "Registration failed",
         description: "An unexpected error occurred. Please try again.",
       });
     } finally {
@@ -103,18 +67,19 @@ const Signup = () => {
           </div>
           <CardTitle className="text-3xl text-center">Create Account</CardTitle>
           <CardDescription className="text-center text-base">
-            Join EduLearn and start your learning journey
+            Join TeachWave and start learning
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="fullName">Full Name</Label>
               <Input
-                id="name"
+                id="fullName"
+                type="text"
                 placeholder="John Doe"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 required
               />
             </div>
@@ -123,58 +88,48 @@ const Signup = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="you@school.edu"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="student@school.edu"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">I am a</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="student">Student</SelectItem>
-                  <SelectItem value="teacher">Teacher</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Create a strong password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                required
-              />
+              <Label htmlFor="role">I am a...</Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="teacher">Teacher</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading}
+            >
               {isLoading ? "Creating account..." : "Create Account"}
             </Button>
           </form>
           <div className="mt-6 text-center text-sm">
             <span className="text-muted-foreground">Already have an account? </span>
-            <Link to="/login" className="text-primary hover:underline font-medium">
+            <Link to="/login" className="text-primary hover:underline font-semibold">
               Sign in
-            </Link>
-          </div>
-          <div className="mt-4 text-center">
-            <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
-              ← Back to home
             </Link>
           </div>
         </CardContent>

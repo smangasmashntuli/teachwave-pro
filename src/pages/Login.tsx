@@ -10,33 +10,17 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, profile, user, loading } = useAuth();
+  const { signIn, user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && profile && !loading) {
-      console.log("Login: User already authenticated, redirecting:", { 
-        email: user.email, 
-        role: profile.role, 
-        roleType: typeof profile.role,
-        profileId: profile.id 
-      });
-      
-      // Ensure role is valid before redirecting
-      if (['student', 'teacher', 'admin'].includes(profile.role)) {
-        const dashboardRoute = `/${profile.role}`;
-        console.log("Login: Navigating to:", dashboardRoute);
-        navigate(dashboardRoute, { replace: true });
-      } else {
-        console.error("Login: Invalid role detected, forcing logout");
-        // Force logout if invalid role
-        window.location.href = '/login';
-      }
+    if (user && !loading) {
+      navigate(`/${user.role}`, { replace: true });
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +33,7 @@ const Login = () => {
         toast({
           variant: "destructive",
           title: "Login failed",
-          description: error.message,
+          description: error,
         });
         return;
       }
@@ -58,7 +42,6 @@ const Login = () => {
         title: "Welcome back!",
         description: "You have been successfully logged in.",
       });
-
     } catch (error) {
       toast({
         variant: "destructive",
@@ -81,7 +64,7 @@ const Login = () => {
           </div>
           <CardTitle className="text-3xl text-center">Welcome Back</CardTitle>
           <CardDescription className="text-center text-base">
-            Sign in to your EduLearn account
+            Sign in to your TeachWave account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -102,24 +85,24 @@ const Login = () => {
               <Input
                 id="password"
                 type="password"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading}
+            >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
           <div className="mt-6 text-center text-sm">
             <span className="text-muted-foreground">Don't have an account? </span>
-            <Link to="/signup" className="text-primary hover:underline font-medium">
+            <Link to="/signup" className="text-primary hover:underline font-semibold">
               Sign up
-            </Link>
-          </div>
-          <div className="mt-4 text-center">
-            <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
-              ← Back to home
             </Link>
           </div>
         </CardContent>

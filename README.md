@@ -1,11 +1,12 @@
 # 🎓 TeachWave Pro - Advanced E-Learning Platform
 
-> A comprehensive, grade-aware e-learning platform built for the South African education system, supporting Grades 8-12 with real-time virtual classrooms, assignment management, and content delivery.
+> A comprehensive, grade-aware e-learning platform built for the South African education system, supporting Grades 8-12 with MySQL database backend, JWT authentication, and role-based access control.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com/)
+[![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Express](https://img.shields.io/badge/Express-000000?style=flat&logo=express&logoColor=white)](https://expressjs.com/)
 
 ## 🌟 Features
 
@@ -20,51 +21,42 @@
 - **South African Curriculum Compliance**: CAPS-aligned subject groups and progression
 - **Grade Isolation**: Students only see content relevant to their grade level
 
-### 🎥 **Real-Time Virtual Classrooms**
-- **WebRTC Video Conferencing**: Live audio/video streaming
-- **Screen Sharing**: Share desktop, applications, or browser tabs
-- **Live Chat**: Real-time messaging during classes
-- **Session Recording**: Capture classes for later review
-- **Participant Management**: Monitor attendance and engagement
+### 🔒 **Authentication & Security**
+- JWT-based authentication
+- Role-based access control (Student/Teacher/Admin)
+- Secure password hashing with bcrypt
+- Protected API endpoints
 
-### 📝 **Assignment & Content Management**
-- **Dynamic Assignment Creation**: Teachers create assignments with file attachments
-- **Automated Grading**: Support for quizzes and structured assessments
-- **File Upload System**: Secure storage for learning materials and submissions
-- **Due Date Management**: Automated notifications and late submission handling
-
-### 📊 **Analytics & Progress Tracking**
-- **Student Performance Dashboard**: Grade tracking and progress visualization
-- **Attendance Monitoring**: Automatic class attendance recording
-- **Subject-wise Analytics**: Performance breakdown by subject and grade
-- **Teacher Insights**: Class performance and engagement metrics
+### 📊 **Dashboard Features**
+- **Student Dashboard**: Track enrolled subjects, assignments, and attendance
+- **Teacher Dashboard**: Manage subjects, create assignments, view students
+- **Admin Dashboard**: System overview, user management, statistics
 
 ## 🏗️ Technology Stack
 
 ### Frontend
-- **React 18** - Modern UI library with hooks and concurrent features
-- **TypeScript** - Type-safe development environment
+- **React 18** - Modern UI library with hooks
+- **TypeScript** - Type-safe development
 - **Vite** - Fast build tool and development server
 - **Tailwind CSS** - Utility-first CSS framework
 - **shadcn/ui** - Beautiful, accessible UI components
+- **Axios** - HTTP client for API requests
+- **React Router** - Client-side routing
 
-### Backend & Database
-- **Supabase** - Backend-as-a-Service with PostgreSQL
-- **Row Level Security (RLS)** - Fine-grained access control
-- **Real-time Subscriptions** - Live data updates
-- **Supabase Storage** - File upload and management
-
-### Real-Time Features
-- **WebRTC** - Peer-to-peer video/audio communication
-- **WebSocket** - Real-time chat and notifications
-- **React Query** - Efficient data fetching and caching
+### Backend
+- **Node.js & Express** - REST API server
+- **MySQL 8.0** - Relational database
+- **JWT** - Token-based authentication
+- **bcryptjs** - Password hashing
+- **cors** - Cross-origin resource sharing
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Node.js** 18+ and npm
-- **Supabase Account** for backend services
-- **Modern Browser** with WebRTC support
+- **MySQL** 8.0+ installed and running
+- **Modern Browser** with JavaScript enabled
 
 ### Installation
 
@@ -79,46 +71,172 @@
    npm install
    ```
 
-3. **Environment Setup**
+3. **Set up MySQL Database**
+   
+   Open MySQL and run:
+   ```bash
+   mysql -u root -p < database/schema.sql
+   ```
+   
+   This creates:
+   - `teachwave` database
+   - All required tables
+   - Default grades (8-12)
+   - Subject groups
+   - Default admin user
+
+4. **Configure Environment Variables**
+   
+   Copy `.env.example` to `.env`:
    ```bash
    cp .env.example .env
    ```
    
-   Configure your `.env` file:
+   Edit `.env` with your MySQL credentials:
    ```env
-   VITE_SUPABASE_URL=your_supabase_project_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
-
-4. **Database Setup**
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASSWORD=your_mysql_password
+   DB_NAME=teachwave
+   DB_PORT=3306
    
-   In your Supabase Dashboard SQL Editor, run the migrations in order:
-   ```sql
-   -- Run each migration file in sequence:
-   -- 1. supabase/migrations/001_initial_schema.sql
-   -- 2. supabase/migrations/014_subject_groups_system.sql  
-   -- 3. supabase/migrations/015_student_enrollments.sql
-   -- 4. supabase/migrations/025_create_student_enrollments.sql
+   JWT_SECRET=change_this_to_random_secret_key
+   PORT=3001
+   VITE_API_URL=http://localhost:3001/api
    ```
 
-5. **Storage Setup**
+5. **Start the Application**
    
-   Run the storage bucket creation script:
-   ```sql
-   -- In Supabase SQL Editor:
-   -- Execute: create-bucket.sql
-   ```
-
-6. **Start Development Server**
+   **Option 1: Run both frontend and backend** (Recommended)
    ```bash
+   npm run dev:all
+   ```
+   
+   **Option 2: Run separately**
+   ```bash
+   # Terminal 1 - Backend
+   npm run server
+   
+   # Terminal 2 - Frontend
    npm run dev
    ```
 
-7. **Access the Application**
+6. **Access the Application**
    
-   Open [http://localhost:5173](http://localhost:5173) in your browser
+   - Frontend: http://localhost:8080
+   - Backend API: http://localhost:3001/api
+   - Health Check: http://localhost:3001/api/health
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 👤 Default Login
+
+**Admin Account:**
+- Email: `admin@teachwave.com`
+- Password: `Admin123!`
+
+You can also create new accounts through the signup page.
+
+## 📁 Project Structure
+
+```
+teachwave-pro/
+├── src/                      # Frontend source code
+│   ├── components/          # React components
+│   │   ├── ui/             # shadcn/ui components
+│   │   └── ProtectedRoute.tsx
+│   ├── contexts/           # React contexts
+│   │   └── AuthContext.tsx # Authentication context
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Utility libraries
+│   │   ├── api.ts          # API service layer
+│   │   └── utils.ts        # Helper functions
+│   ├── pages/              # Application pages
+│   │   ├── Index.tsx       # Landing page
+│   │   ├── Login.tsx       # Login page
+│   │   ├── Signup.tsx      # Signup page
+│   │   ├── StudentDashboard.tsx
+│   │   ├── TeacherDashboard.tsx
+│   │   └── AdminDashboard.tsx
+│   └── App.tsx             # Main app component
+│
+├── server/                  # Backend source code
+│   ├── config/             # Configuration files
+│   │   └── database.js     # MySQL connection
+│   ├── middleware/         # Express middleware
+│   │   └── auth.js         # JWT authentication
+│   ├── routes/             # API routes
+│   │   ├── auth.js         # Authentication endpoints
+│   │   ├── student.js      # Student endpoints
+│   │   ├── teacher.js      # Teacher endpoints
+│   │   └── admin.js        # Admin endpoints
+│   └── index.js            # Express server entry
+│
+├── database/               # Database files
+│   └── schema.sql         # MySQL schema
+│
+├── .env.example           # Environment variables template
+├── package.json           # Dependencies
+└── SETUP_GUIDE.md        # Detailed setup instructions
+```
+
+## 🔌 API Endpoints
+
+### Authentication
+- `POST /api/auth/signup` - Register new user
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user (requires token)
+- `POST /api/auth/logout` - Logout
+
+### Student (Requires student role)
+- `GET /api/student/dashboard` - Dashboard statistics
+- `GET /api/student/subjects` - Enrolled subjects
+- `GET /api/student/assignments` - Assignments list
+
+### Teacher (Requires teacher role)
+- `GET /api/teacher/dashboard` - Dashboard statistics
+- `GET /api/teacher/subjects` - Assigned subjects
+- `POST /api/teacher/assignments` - Create assignment
+
+### Admin (Requires admin role)
+- `GET /api/admin/users` - All users list
+- `GET /api/admin/stats` - System statistics
+
+## 💾 Database Schema
+
+### Main Tables
+
+- **users** - User accounts with roles
+- **students** - Student-specific data
+- **teachers** - Teacher-specific data
+- **grades** - Grade levels (8-12)
+- **subjects** - Available subjects
+- **subject_groups** - Subject streams
+- **student_enrollments** - Grade enrollments
+- **subject_enrollments** - Subject enrollments
+- **teacher_assignments** - Teacher-subject assignments
+- **assignments** - Assignment details
+- **assignment_submissions** - Student submissions
+- **virtual_classes** - Virtual classroom sessions
+- **attendance** - Attendance records
+
+## 🛠️ Development
+
+### Available Scripts
+
+```bash
+npm run dev          # Start frontend (Vite)
+npm run server       # Start backend (Express)
+npm run dev:all      # Start both frontend and backend
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Lint code
+```
+
+## 📱 Browser Support
+
+- **Chrome/Edge** 90+
+- **Firefox** 88+
+- **Safari** 14+
+- **Mobile Browsers** - iOS Safari, Chrome MobileThe only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
 Follow these steps:
 
@@ -196,52 +314,7 @@ npm run dev
    - Configure curriculum streams (Science, Accounting, Humanities)
    - Oversee student enrollments
 
-## 🗄️ Database Schema
-
-### Core Tables
-
-```sql
--- User profiles with role-based access
-profiles (id, email, full_name, role, created_at)
-
--- Grade levels (8, 9, 10, 11, 12)
-grades (id, name, description, academic_year)
-
--- Subjects by grade
-subjects (id, name, code, grade_id, description)
-
--- Subject groups (streams)
-subject_groups (id, name, description, grade_id)
-
--- Two-tier enrollment system
-student_enrollments (student_id, grade_id, subject_group_id)
-subject_enrollments (student_id, subject_id, enrollment_date)
-
--- Teacher assignments
-teacher_assignments (teacher_id, subject_id, assigned_date)
-
--- Learning content and assignments
-learning_content (id, title, content_type, file_url, subject_id)
-assignments (id, title, instructions, due_date, subject_id)
-```
-
-### Key Relationships
-
-```
-Student → Grade → Subject Group → Individual Subjects
-Teacher → Assigned Subjects → Content & Assignments
-Admin → System-wide Management
-```
-
-## 🔐 Security Features
-
-- **Row Level Security (RLS)** - Database-level access control
-- **Grade Isolation** - Students only access their grade-level content
-- **Role-based Permissions** - Strict separation of student/teacher/admin capabilities
-- **Secure File Upload** - Validated file types and storage policies
-- **Authentication** - Supabase Auth with email verification
-
-## 📱 Browser Support
+##  Browser Support
 
 - **Chrome/Edge** 90+ (Recommended for WebRTC)
 - **Firefox** 88+
@@ -271,20 +344,11 @@ npm run lint
 ```
 src/
 ├── components/          # Reusable UI components
-│   ├── admin/          # Admin-specific components
-│   ├── student/        # Student dashboard components
-│   ├── teacher/        # Teacher tools and interfaces
 │   └── ui/             # Base UI components (shadcn/ui)
-├── contexts/           # React contexts (Auth, etc.)
 ├── hooks/              # Custom React hooks
-├── integrations/       # External service integrations
 ├── lib/                # Utility functions
 ├── pages/              # Main application pages
 └── assets/             # Static assets
-
-supabase/
-├── migrations/         # Database migration files
-└── config.toml        # Supabase configuration
 ```
 
 ## 🚀 Deployment
