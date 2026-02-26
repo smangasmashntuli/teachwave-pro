@@ -175,18 +175,6 @@ This will:
 - ✅ Create default teacher
 - ✅ Assign default teacher to all Grade 8 subjects
 
-### 3. Default User Credentials
-
-**Admin Account:**
-- Email: `admin@teachwave.com`
-- Password: `Admin123!`
-- Role: admin
-
-**Teacher Account:**
-- Email: `teacher@teachwave.com`
-- Password: `Teacher123!`
-- Role: teacher
-- Assigned to: All Grade 8 subjects
 
 ---
 
