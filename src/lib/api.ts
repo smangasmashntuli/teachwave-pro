@@ -54,6 +54,52 @@ export const studentAPI = {
   
   getAssignments: () =>
     api.get('/student/assignments'),
+  
+  getAssignment: (id: number) =>
+    api.get(`/student/assignments/${id}`),
+  
+  submitAssignment: (id: number, data: { submission_text: string; file_url?: string }) =>
+    api.post(`/student/assignments/${id}/submit`, data),
+  
+  getGrades: () =>
+    api.get('/student/grades'),
+  
+  // Subject Detail
+  getSubjectDetail: (subjectId: number) =>
+    api.get(`/student/subjects/${subjectId}/detail`),
+  
+  getLearningMaterials: (subjectId: number) =>
+    api.get(`/student/subjects/${subjectId}/learning-materials`),
+  
+  // Quizzes
+  getQuizzes: (subjectId: number) =>
+    api.get(`/student/subjects/${subjectId}/quizzes`),
+  
+  getQuiz: (quizId: number) =>
+    api.get(`/student/quizzes/${quizId}`),
+  
+  submitQuiz: (quizId: number, data: { answers: Array<{questionId: number, answerText: string}> }) =>
+    api.post(`/student/quizzes/${quizId}/submit`, data),
+  
+  getQuizResults: (quizId: number) =>
+    api.get(`/student/quizzes/${quizId}/results`),
+  
+  // Tests
+  getTests: (subjectId: number) =>
+    api.get(`/student/subjects/${subjectId}/tests`),
+  
+  getTest: (testId: number) =>
+    api.get(`/student/tests/${testId}`),
+  
+  submitTest: (testId: number, data: { answers: Array<{questionId: number, answerText: string}> }) =>
+    api.post(`/student/tests/${testId}/submit`, data),
+  
+  getTestResults: (testId: number) =>
+    api.get(`/student/tests/${testId}/results`),
+  
+  // Resources
+  getResources: (subjectId: number) =>
+    api.get(`/student/subjects/${subjectId}/resources`),
 };
 
 export const teacherAPI = {
@@ -81,6 +127,44 @@ export const teacherAPI = {
   
   gradeSubmission: (submissionId: number, data: { grade: number; feedback: string }) =>
     api.put(`/teacher/submissions/${submissionId}/grade`, data),
+  
+  // Subject Detail
+  getSubjectDetail: (subjectId: number) =>
+    api.get(`/teacher/subjects/${subjectId}/detail`),
+  
+  // Learning Materials
+  getLearningMaterials: (subjectId: number) =>
+    api.get(`/teacher/subjects/${subjectId}/learning-materials`),
+  
+  createLearningMaterial: (subjectId: number, data: any) =>
+    api.post(`/teacher/subjects/${subjectId}/learning-materials`, data),
+  
+  // Quizzes
+  getQuizzes: (subjectId: number) =>
+    api.get(`/teacher/subjects/${subjectId}/quizzes`),
+  
+  createQuiz: (subjectId: number, data: any) =>
+    api.post(`/teacher/subjects/${subjectId}/quizzes`, data),
+  
+  getQuizResults: (quizId: number) =>
+    api.get(`/teacher/quizzes/${quizId}/results`),
+  
+  // Tests
+  getTests: (subjectId: number) =>
+    api.get(`/teacher/subjects/${subjectId}/tests`),
+  
+  createTest: (subjectId: number, data: any) =>
+    api.post(`/teacher/subjects/${subjectId}/tests`, data),
+  
+  getTestResults: (testId: number) =>
+    api.get(`/teacher/tests/${testId}/results`),
+  
+  // Resources
+  getResources: (subjectId: number) =>
+    api.get(`/teacher/subjects/${subjectId}/resources`),
+  
+  createResource: (subjectId: number, data: any) =>
+    api.post(`/teacher/subjects/${subjectId}/resources`, data),
 };
 
 export const adminAPI = {

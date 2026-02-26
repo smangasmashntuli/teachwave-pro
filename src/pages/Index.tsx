@@ -46,7 +46,7 @@ const Index = () => {
           <div className="flex items-center gap-2">
             <BookOpen className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              EduLearn
+              TeachWave
             </span>
           </div>
           <div className="flex gap-3">
@@ -73,7 +73,7 @@ const Index = () => {
               Transform Your Learning Experience
             </h1>
             <p className="text-xl md:text-2xl text-white/90 animate-fade-in">
-              A comprehensive platform for students, teachers, and administrators to collaborate, learn, and grow together
+              A comprehensive platform for learners, teachers, and administrators to collaborate, learn, and grow together
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4 animate-fade-in">
               <Link to="/signup">

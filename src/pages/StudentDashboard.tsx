@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, FileText, Calendar, Trophy } from "lucide-react";
@@ -15,6 +16,7 @@ interface StudentStats {
 
 const StudentDashboard = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<StudentStats>({
     enrolledSubjects: 0,
     upcomingClasses: 0,
@@ -136,26 +138,49 @@ const StudentDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Access your learning resources</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button className="w-full" variant="outline">
-              <BookOpen className="mr-2 h-4 w-4" />
-              My Subjects
-            </Button>
-            <Button className="w-full" variant="outline">
-              <FileText className="mr-2 h-4 w-4" />
-              Assignments
-            </Button>
-            <Button className="w-full" variant="outline">
-              <Calendar className="mr-2 h-4 w-4" />
-              Class Schedule
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Learning Resources */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Learning Resources
+              </CardTitle>
+              <CardDescription>Access your subjects and materials</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button className="w-full" onClick={() => navigate('/student/subjects')}>
+                <BookOpen className="mr-2 h-4 w-4" />
+                View My Subjects
+              </Button>
+              <Button className="w-full" variant="outline" onClick={() => navigate('/student/assignments')}>
+                <FileText className="mr-2 h-4 w-4" />
+                View Assignments
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Performance Tracking */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5" />
+                Performance Tracking
+              </CardTitle>
+              <CardDescription>Monitor your progress and grades</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button className="w-full" onClick={() => navigate('/student/grades')}>
+                <Trophy className="mr-2 h-4 w-4" />
+                View My Grades
+              </Button>
+              <Button className="w-full" variant="outline" onClick={() => navigate('/student/assignments')}>
+                <Calendar className="mr-2 h-4 w-4" />
+                Pending Assignments
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );
