@@ -178,21 +178,28 @@ export default function TeacherSubjects() {
               </CardContent>
               <CardFooter className="flex gap-2">
                 <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => navigate(`/teacher/subjects/${subject.id}`)}
+                  className="flex-1"
+                >
+                  View Details
+                </Button>
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => navigate(`/teacher/students?subjectId=${subject.id}&gradeId=${subject.grade_id}`)}
-                  className="flex-1"
                 >
                   <Users className="h-4 w-4 mr-1" />
-                  View Students
+                  Students
                 </Button>
                 <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => openCreateDialog(subject)}
-                  className="flex-1"
                 >
                   <FileText className="h-4 w-4 mr-1" />
-                  New Assignment
+                  Assignment
                 </Button>
               </CardFooter>
             </Card>
