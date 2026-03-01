@@ -181,12 +181,22 @@ CREATE TABLE IF NOT EXISTS virtual_classes (
   grade_id INT NOT NULL,
   scheduled_start DATETIME NOT NULL,
   scheduled_end DATETIME,
+  actual_start DATETIME,
+  actual_end DATETIME,
+  room_id VARCHAR(100) UNIQUE NOT NULL COMMENT 'Unique identifier for the virtual room',
   meeting_url VARCHAR(500),
+  is_recording BOOLEAN DEFAULT FALSE,
+  recording_enabled BOOLEAN DEFAULT FALSE,
+  max_participants INT DEFAULT 50,
   status ENUM('scheduled', 'live', 'completed', 'cancelled') DEFAULT 'scheduled',
+  description TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
   FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE,
-  FOREIGN KEY (grade_id) REFERENCES grades(id) ON DELETE CASCADE
+  FOREIGN KEY (grade_id) REFERENCES grades(id) ON DELETE CASCADE,
+  INDEX idx_status (status),
+  INDEX idx_room_id (room_id),
+  INDEX idx_teacher_id (teacher_id)
 );
 
 -- Attendance tracking
@@ -200,6 +210,37 @@ CREATE TABLE IF NOT EXISTS attendance (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (class_id) REFERENCES virtual_classes(id) ON DELETE CASCADE,
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+);
+
+-- Virtual class recordings
+CREATE TABLE IF NOT EXISTS virtual_class_recordings (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  class_id INT NOT NULL,
+  recording_name VARCHAR(255) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  file_size BIGINT,
+  duration INT COMMENT 'Duration in seconds',
+  recording_started_at DATETIME,
+  recording_ended_at DATETIME,
+  is_available BOOLEAN DEFAULT TRUE,
+  views_count INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (class_id) REFERENCES virtual_classes(id) ON DELETE CASCADE,
+  INDEX idx_class_id (class_id)
+);
+
+-- Virtual class chat messages (for persistent chat history)
+CREATE TABLE IF NOT EXISTS virtual_class_messages (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  class_id INT NOT NULL,
+  user_id INT NOT NULL,
+  message TEXT NOT NULL,
+  message_type ENUM('text', 'system', 'file', 'poll') DEFAULT 'text',
+  metadata JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (class_id) REFERENCES virtual_classes(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_class_id (class_id)
 );
 
 -- ============================================

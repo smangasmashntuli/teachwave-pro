@@ -13,11 +13,15 @@ import StudentSubjects from "./pages/StudentSubjects";
 import StudentSubjectDetail from "./pages/StudentSubjectDetail";
 import StudentAssignments from "./pages/StudentAssignments";
 import StudentGrades from "./pages/StudentGrades";
+import StudentVirtualClasses from "./pages/StudentVirtualClasses";
+import StudentVirtualClassroom from "./pages/StudentVirtualClassroom";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import TeacherSubjects from "./pages/TeacherSubjects";
 import TeacherSubjectDetail from "./pages/TeacherSubjectDetail";
 import TeacherStudents from "./pages/TeacherStudents";
 import TeacherAssignments from "./pages/TeacherAssignments";
+import TeacherVirtualClasses from "./pages/TeacherVirtualClasses";
+import TeacherVirtualClassroom from "./pages/TeacherVirtualClassroom";
 import AdminDashboard from "./pages/AdminDashboard";
 import ManageUsers from "./pages/ManageUsers";
 import ManageTeachers from "./pages/ManageTeachers";
@@ -79,6 +83,14 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/student/classes" 
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <StudentVirtualClasses />
+                </ProtectedRoute>
+              } 
+            />
             
             {/* Teacher Routes */}
             <Route 
@@ -118,6 +130,32 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["teacher"]}>
                   <TeacherAssignments />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/teacher/classes" 
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <TeacherVirtualClasses />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Virtual Classroom Routes */}
+            <Route 
+              path="/virtual-classroom/:roomId" 
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <TeacherVirtualClassroom />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/student/virtual-classroom/:roomId" 
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <StudentVirtualClassroom />
                 </ProtectedRoute>
               } 
             />

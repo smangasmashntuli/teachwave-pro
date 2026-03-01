@@ -1,0 +1,3 @@
+# This directory stores recorded virtual classroom sessions
+# Recordings are stored here and referenced in the database
+# Add *.webm to .gitignore to avoid committing large video files
